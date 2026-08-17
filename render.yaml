@@ -1,0 +1,58 @@
+services:
+  - type: web
+    name: phanhieu-app
+    runtime: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: phanhieu-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: APP_URL
+        sync: false # điền URL thật của app sau khi deploy, vd. https://phanhieu-app.onrender.com
+      - key: CRON_SECRET
+        generateValue: true
+      # ---- Cấu hình gửi email (thông báo giao việc / nhắc hạn) ----
+      # Điền thủ công trong Render Dashboard (Environment) — không commit giá trị thật.
+      # Có thể dùng SMTP nội bộ của trường, hoặc Gmail/Google Workspace (App Password).
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false # vd: "Phân Hiệu Thanh Hóa <no-reply@phanhieu.edu.vn>"
+
+  # Nhắc hạn hoàn thành nhiệm vụ — chạy mỗi ngày lúc 08:00 giờ Việt Nam (01:00 UTC).
+  # Cron Job là tính năng trả phí trên Render; có thể bỏ block này nếu chưa cần.
+  - type: cron
+    name: phanhieu-due-date-reminders
+    runtime: node
+    plan: starter
+    schedule: "0 1 * * *"
+    buildCommand: "true"
+    startCommand: >
+      curl -fsS -X POST "$APP_URL/api/cron/due-date-reminders"
+      -H "Authorization: Bearer $CRON_SECRET"
+    envVars:
+      - key: APP_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false # phải TRÙNG với CRON_SECRET của service phanhieu-app ở trên
+
+databases:
+  - name: phanhieu-db
+    plan: starter
+    databaseName: phanhieu
+    user: phanhieu
