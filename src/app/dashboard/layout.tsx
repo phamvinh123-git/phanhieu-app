@@ -11,8 +11,8 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
     <MeProvider>
       <div className="flex min-h-screen">
         <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-slate-50">
-          <div className="mx-auto max-w-6xl px-6 py-6">{children}</div>
+        <main className="app-shell-bg flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
         </main>
       </div>
     </MeProvider>

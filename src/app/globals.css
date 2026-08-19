@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f5f9;
+  --foreground: #1f1b24;
 }
 
 @theme inline {
@@ -10,17 +10,34 @@
   --color-foreground: var(--foreground);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
+}
+
+/* ---- Nền lưới điểm mờ kiểu Microsoft To Do (App Shell) ---- */
+.app-shell-bg {
+  background-color: #f6f5f9;
+  background-image: radial-gradient(circle, rgba(190, 24, 44, 0.08) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* ---- Thẻ (card) nổi kiểu To Do: bo tròn lớn, đổ bóng mềm, hover nâng nhẹ ----
+   Đặt trong @layer components để các utility Tailwind (vd. bg-gradient-to-br,
+   bg-slate-100...) luôn được ưu tiên hơn nền trắng mặc định ở đây, tránh bị
+   .todo-card "đè" mất màu nền tuỳ biến. */
+@layer components {
+  .todo-card {
+    border-radius: 1rem;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(20, 10, 20, 0.04), 0 8px 24px -12px rgba(190, 24, 44, 0.12);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .todo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(20, 10, 20, 0.06), 0 16px 32px -14px rgba(190, 24, 44, 0.2);
+  }
 }
 
 /* ---- Trang đăng nhập: hiệu ứng chuyển động tông đỏ-trắng ---- */
@@ -91,4 +108,50 @@ body {
   background-size: 400px 100%;
   background-repeat: no-repeat;
   animation: shimmer 2.8s ease-in-out infinite;
+}
+
+/* ---- Micro-interactions kiểu Microsoft To Do: check hoàn thành, sao chép,
+   danh sách xuất hiện lần lượt (stagger) ---- */
+@keyframes check-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-check-pop {
+  animation: check-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes sidebar-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.animate-sidebar-glow {
+  animation: sidebar-glow 2.4s ease-in-out infinite;
+}
+
+/* Thanh cuộn mảnh, tinh tế hơn mặc định trình duyệt */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(190, 24, 44, 0.18);
+  border-radius: 999px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(190, 24, 44, 0.32);
 }
