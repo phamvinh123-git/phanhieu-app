@@ -14,11 +14,20 @@ function genPassword(): string {
   return `${out}!${randomBytes(1)[0] % 10}`;
 }
 
+// Khi SEED_DEFAULT_PASSWORD được đặt (dùng lúc seed môi trường production qua
+// 1 job chạy 1 lần), TẤT CẢ tài khoản dùng chung 1 mật khẩu khởi tạo này thay
+// vì mật khẩu ngẫu nhiên riêng — vì hệ thống giờ đã có trang tự đổi mật khẩu
+// (/dashboard/change-password), mỗi người đăng nhập lần đầu bằng mật khẩu
+// chung này rồi tự đặt mật khẩu riêng ngay. Không đặt biến này thì hành vi cũ
+// giữ nguyên: sinh mật khẩu ngẫu nhiên riêng cho từng người, ghi ra
+// credentials.generated.csv (dùng cho môi trường dev/local).
+const defaultPassword = process.env.SEED_DEFAULT_PASSWORD?.trim() || null;
+
 type SeedUser = { fullName: string; email: string; title: string };
 const credentials: { fullName: string; email: string; title: string; password: string }[] = [];
 
 async function mkUser(u: SeedUser) {
-  const password = genPassword();
+  const password = defaultPassword ?? genPassword();
   const passwordHash = await hashPassword(password);
   const [row] = await db
     .insert(users)

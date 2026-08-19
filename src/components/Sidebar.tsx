@@ -12,6 +12,7 @@ import {
   KanbanSquare,
   LogOut,
   ShieldCheck,
+  KeyRound,
 } from "lucide-react";
 import { useMe } from "./MeProvider";
 
@@ -92,13 +93,24 @@ export function Sidebar() {
       <div className="border-t border-slate-200 px-4 py-3">
         <p className="truncate text-sm font-medium text-slate-800">{me?.user?.fullName}</p>
         <p className="truncate text-xs text-slate-400">{me?.user?.email}</p>
-        <button
-          onClick={logout}
-          className="mt-2 flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-red-600"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          Đăng xuất
-        </button>
+        <div className="mt-2 flex items-center gap-3">
+          <Link
+            href="/dashboard/change-password"
+            className={`flex items-center gap-1.5 text-xs font-medium ${
+              pathname === "/dashboard/change-password" ? "text-red-600" : "text-slate-500 hover:text-red-600"
+            }`}
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            Đổi mật khẩu
+          </Link>
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-red-600"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Đăng xuất
+          </button>
+        </div>
       </div>
     </aside>
   );
