@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -14,6 +15,8 @@ import {
   LogOut,
   ShieldCheck,
   KeyRound,
+  Menu,
+  X,
 } from "lucide-react";
 import { useMe } from "./MeProvider";
 
@@ -36,6 +39,12 @@ export function Sidebar() {
   const { me, loading } = useMe();
   const pathname = usePathname();
   const router = useRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Đóng menu di động mỗi khi chuyển trang (bấm vào 1 mục trong menu).
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -43,8 +52,8 @@ export function Sidebar() {
     router.refresh();
   }
 
-  return (
-    <aside className="flex h-screen w-72 shrink-0 flex-col border-r border-red-100/70 bg-gradient-to-b from-[#fff8f8] via-white to-white">
+  const body = (
+    <>
       <div className="flex items-center gap-2.5 px-4 py-4">
         <motion.div
           initial={{ scale: 0.7, opacity: 0 }}
@@ -143,6 +152,68 @@ export function Sidebar() {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Thanh trên cùng chỉ hiện trên di động (< md): logo + nút mở menu */}
+      <div className="flex items-center justify-between border-b border-red-100/70 bg-white px-4 py-3 md:hidden">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-red-100">
+            <Image src="/logo.png" alt="Logo" width={26} height={26} className="h-full w-full object-contain" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold leading-tight text-slate-900">Đại học Y Hà Nội</p>
+            <p className="text-[11px] leading-tight text-red-600">Phân Hiệu Thanh Hóa</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setMobileOpen(true)}
+          aria-label="Mở menu"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-red-600 transition-colors hover:bg-red-50"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Sidebar cố định — chỉ hiện từ màn hình md trở lên */}
+      <aside className="hidden h-screen w-72 shrink-0 flex-col border-r border-red-100/70 bg-gradient-to-b from-[#fff8f8] via-white to-white md:flex">
+        {body}
+      </aside>
+
+      {/* Menu trượt ra trên di động */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileOpen(false)}
+              className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm md:hidden"
+            />
+            <motion.aside
+              key="drawer"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 34 }}
+              className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-gradient-to-b from-[#fff8f8] via-white to-white shadow-2xl md:hidden"
+            >
+              <button
+                onClick={() => setMobileOpen(false)}
+                aria-label="Đóng menu"
+                className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              {body}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

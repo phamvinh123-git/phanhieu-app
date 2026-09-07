@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, X, Clock, MessageSquare, User as UserIcon, Building2, Check, Inbox } from "lucide-react";
+import { Plus, X, Clock, MessageSquare, User as UserIcon, Building2, Check, Inbox, Filter } from "lucide-react";
 import { useMe } from "./MeProvider";
 import { ModalShell } from "./ModalShell";
 import { can, type ModuleCode, type RoleCode } from "@/lib/rbac-config";
@@ -76,6 +76,9 @@ export function KanbanBoard({
   const [dragId, setDragId] = useState<number | null>(null);
   const [dragOverCol, setDragOverCol] = useState<Task["status"] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [includeNoDue, setIncludeNoDue] = useState(true);
 
   const moduleCode = MODULE_BY_LEVEL[level];
   const myRoleCodes = useMemo(() => (me?.roles.map((r) => r.role) ?? []) as RoleCode[], [me]);
@@ -121,11 +124,29 @@ export function KanbanBoard({
     }
   }
 
+  const dateFilterActive = Boolean(fromDate || toDate);
+
+  const filteredTasks = useMemo(() => {
+    if (!dateFilterActive) return tasks;
+    return tasks.filter((t) => {
+      if (!t.dueDate) return includeNoDue;
+      const d = t.dueDate.slice(0, 10);
+      if (fromDate && d < fromDate) return false;
+      if (toDate && d > toDate) return false;
+      return true;
+    });
+  }, [tasks, fromDate, toDate, includeNoDue, dateFilterActive]);
+
+  function clearDateFilter() {
+    setFromDate("");
+    setToDate("");
+  }
+
   const columns = useMemo(() => {
     const map: Record<Task["status"], Task[]> = { todo: [], in_progress: [], done: [] };
-    for (const t of tasks) map[t.status].push(t);
+    for (const t of filteredTasks) map[t.status].push(t);
     return map;
-  }, [tasks]);
+  }, [filteredTasks]);
 
   return (
     <div>
@@ -143,6 +164,53 @@ export function KanbanBoard({
           >
             <Plus className="h-4 w-4" /> Tạo công việc
           </motion.button>
+        )}
+      </div>
+
+      <div className="todo-card mb-5 flex flex-wrap items-end gap-3 px-4 py-3.5">
+        <div className="flex items-center gap-1.5 pb-2 text-sm font-medium text-slate-500">
+          <Filter className="h-4 w-4 text-red-500" />
+          Lọc theo hạn hoàn thành
+        </div>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+          Từ ngày
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-colors focus:border-red-300"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+          Đến ngày
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-colors focus:border-red-300"
+          />
+        </label>
+        <label className="flex items-center gap-1.5 pb-2.5 text-xs font-medium text-slate-500">
+          <input
+            type="checkbox"
+            checked={includeNoDue}
+            onChange={(e) => setIncludeNoDue(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-slate-300 text-red-600 focus:ring-red-400"
+          />
+          Hiển thị cả công việc chưa có hạn
+        </label>
+        {dateFilterActive && (
+          <button
+            onClick={clearDateFilter}
+            className="mb-0.5 flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200"
+          >
+            <X className="h-3.5 w-3.5" /> Xóa lọc
+          </button>
+        )}
+        {dateFilterActive && (
+          <span className="pb-2.5 text-xs text-slate-400">
+            Đang hiển thị {filteredTasks.length}/{tasks.length} công việc
+          </span>
         )}
       </div>
 

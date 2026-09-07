@@ -67,8 +67,8 @@ export default function AdminUsersPage() {
       {loading ? (
         <div className="todo-card h-64 animate-pulse bg-slate-100/70" />
       ) : (
-        <div className="todo-card overflow-hidden p-0">
-          <table className="w-full text-sm">
+        <div className="todo-card overflow-x-auto p-0">
+          <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-2.5">Họ tên</th>
@@ -204,7 +204,7 @@ function RoleRowsEditor({
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96 }}
-                className="flex items-center gap-2 rounded-xl border border-slate-200 p-2"
+                className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 p-2"
               >
                 <select
                   value={row.role}
@@ -223,7 +223,7 @@ function RoleRowsEditor({
                     required
                     value={row.departmentId ?? ""}
                     onChange={(e) => updateRole(idx, { departmentId: Number(e.target.value) })}
-                    className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-red-400"
+                    className="min-w-[140px] flex-1 rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-red-400"
                   >
                     <option value="">-- Chọn phòng --</option>
                     {departments.map((d) => (
@@ -301,7 +301,7 @@ function CreateUserModal({
       </div>
 
       <form onSubmit={submit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">Họ và tên</label>
             <input required value={fullName} onChange={(e) => setFullName(e.target.value)} className={inputCls} />

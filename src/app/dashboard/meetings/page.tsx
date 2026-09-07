@@ -330,7 +330,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="space-y-3"
           >
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">Tiêu đề cuộc họp</label>
                 <input required value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
