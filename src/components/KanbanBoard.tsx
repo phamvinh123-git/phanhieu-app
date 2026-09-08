@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, X, Clock, MessageSquare, User as UserIcon, Building2, Check, Inbox, Filter } from "lucide-react";
+import { Plus, X, Clock, MessageSquare, User as UserIcon, Building2, Check, Inbox, Filter, FileText } from "lucide-react";
 import { useMe } from "./MeProvider";
 import { ModalShell } from "./ModalShell";
 import { can, type ModuleCode, type RoleCode } from "@/lib/rbac-config";
@@ -23,8 +23,17 @@ type Task = {
   departments?: Department[]; // dùng cho cấp Phân hiệu (có thể nhiều Phòng)
   createdBy: string | null;
   dueDate: string | null;
+  meetingId: number | null;
   createdAt: string;
 };
+
+type Meeting = { id: number; title: string; meetingDate: string };
+
+function meetingLabel(m: Meeting) {
+  const d = new Date(m.meetingDate);
+  const ds = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  return `${m.title} (${ds})`;
+}
 
 const STATUS_COLUMNS: { key: Task["status"]; label: string; dot: string; headerBg: string }[] = [
   { key: "todo", label: "Cần làm", dot: "bg-slate-400", headerBg: "from-slate-100 to-transparent" },
@@ -79,6 +88,8 @@ export function KanbanBoard({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [includeNoDue, setIncludeNoDue] = useState(true);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [selectedMeetingId, setSelectedMeetingId] = useState("");
 
   const moduleCode = MODULE_BY_LEVEL[level];
   const myRoleCodes = useMemo(() => (me?.roles.map((r) => r.role) ?? []) as RoleCode[], [me]);
@@ -98,6 +109,18 @@ export function KanbanBoard({
       .then((r) => r.json())
       .then((data) => setDepartments(data.departments ?? []));
   }, [loadTasks]);
+
+  // Chỉ nhiệm vụ cấp Phân hiệu mới gắn với 1 cuộc họp cụ thể (được trích
+  // xuất từ biên bản họp) — nhiệm vụ cấp Phòng không có mục lọc này. Một số
+  // vai trò (Trưởng phòng) không có quyền xem "meetings" nên bỏ qua lỗi nếu
+  // có, mục lọc sẽ tự ẩn khi danh sách cuộc họp rỗng.
+  useEffect(() => {
+    if (level !== "branch") return;
+    fetch("/api/meetings")
+      .then((r) => (r.ok ? r.json() : { meetings: [] }))
+      .then((data) => setMeetings(data.meetings ?? []))
+      .catch(() => setMeetings([]));
+  }, [level]);
 
   const deptName = (id: number | null) => departments.find((d) => d.id === id)?.name ?? "";
 
@@ -125,21 +148,30 @@ export function KanbanBoard({
   }
 
   const dateFilterActive = Boolean(fromDate || toDate);
+  const meetingFilterActive = level === "branch" && Boolean(selectedMeetingId);
 
+  // Hai bộ lọc độc lập, kết hợp với nhau (AND): lọc theo cuộc họp gốc và
+  // lọc theo khoảng hạn hoàn thành — mỗi bộ lọc có thể bật/tắt riêng.
   const filteredTasks = useMemo(() => {
-    if (!dateFilterActive) return tasks;
     return tasks.filter((t) => {
-      if (!t.dueDate) return includeNoDue;
-      const d = t.dueDate.slice(0, 10);
-      if (fromDate && d < fromDate) return false;
-      if (toDate && d > toDate) return false;
+      if (meetingFilterActive && String(t.meetingId ?? "") !== selectedMeetingId) return false;
+      if (dateFilterActive) {
+        if (!t.dueDate) return includeNoDue;
+        const d = t.dueDate.slice(0, 10);
+        if (fromDate && d < fromDate) return false;
+        if (toDate && d > toDate) return false;
+      }
       return true;
     });
-  }, [tasks, fromDate, toDate, includeNoDue, dateFilterActive]);
+  }, [tasks, fromDate, toDate, includeNoDue, dateFilterActive, meetingFilterActive, selectedMeetingId]);
 
   function clearDateFilter() {
     setFromDate("");
     setToDate("");
+  }
+
+  function clearMeetingFilter() {
+    setSelectedMeetingId("");
   }
 
   const columns = useMemo(() => {
@@ -213,6 +245,43 @@ export function KanbanBoard({
           </span>
         )}
       </div>
+
+      {level === "branch" && meetings.length > 0 && (
+        <div className="todo-card mb-5 flex flex-wrap items-end gap-3 px-4 py-3.5">
+          <div className="flex items-center gap-1.5 pb-2 text-sm font-medium text-slate-500">
+            <FileText className="h-4 w-4 text-red-500" />
+            Lọc theo cuộc họp
+          </div>
+          <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
+            Chọn cuộc họp
+            <select
+              value={selectedMeetingId}
+              onChange={(e) => setSelectedMeetingId(e.target.value)}
+              className="min-w-[220px] rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-colors focus:border-red-300"
+            >
+              <option value="">Tất cả cuộc họp</option>
+              {meetings.map((m) => (
+                <option key={m.id} value={String(m.id)}>
+                  {meetingLabel(m)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {meetingFilterActive && (
+            <button
+              onClick={clearMeetingFilter}
+              className="mb-0.5 flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200"
+            >
+              <X className="h-3.5 w-3.5" /> Xóa lọc
+            </button>
+          )}
+          {meetingFilterActive && (
+            <span className="pb-2.5 text-xs text-slate-400">
+              Đang hiển thị {filteredTasks.length}/{tasks.length} công việc
+            </span>
+          )}
+        </div>
+      )}
 
       <AnimatePresence>
         {error && (
