@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Mail, Lock, ArrowRight, ShieldCheck } from "lucide-react";
+import { LogoBadge } from "@/components/LogoBadge";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -62,17 +62,15 @@ export default function LoginPage() {
           </div>
 
           <div className="relative animate-fade-in-up">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white p-1.5 shadow-lg">
-              <Image src="/logo.png" alt="Logo Đại học Y Hà Nội" width={72} height={72} className="h-full w-full object-contain" />
-            </div>
+            <LogoBadge size="lg" />
           </div>
 
           <div className="relative animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-red-100">Trường Đại học Y Hà Nội</p>
-            <h1 className="mt-1 text-2xl font-bold leading-snug">Phân Hiệu Thanh Hóa</h1>
+            <h1 className="text-xl font-bold leading-snug">Trường Đại học Y Hà Nội</h1>
+            <p className="mt-1 text-2xl font-bold leading-snug">Phân Hiệu Thanh Hóa</p>
             <p className="mt-3 text-sm leading-relaxed text-red-50/90">
-              Hệ thống phân công &amp; theo dõi công việc nội bộ — kết nối Ban giám đốc, Thư kí
-              phân hiệu và các Phòng ban trong cùng một quy trình.
+              Hệ thống phân công &amp; theo dõi công việc nội bộ — kết nối Ban Giám Đốc, Thư ký
+              Phân Hiệu và các Phòng ban trong cùng một quy trình.
             </p>
           </div>
 
@@ -85,9 +83,7 @@ export default function LoginPage() {
         {/* Form đăng nhập */}
         <div className="col-span-3 flex flex-col justify-center p-8 sm:p-12">
           <div className="mb-8 flex items-center gap-3 md:hidden animate-fade-in-up">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white p-1 ring-1 ring-red-100">
-              <Image src="/logo.png" alt="Logo" width={44} height={44} className="h-full w-full object-contain" />
-            </div>
+            <LogoBadge size="md" />
             <div>
               <p className="text-sm font-semibold text-slate-900">Đại học Y Hà Nội</p>
               <p className="text-xs text-red-600">Phân Hiệu Thanh Hóa</p>

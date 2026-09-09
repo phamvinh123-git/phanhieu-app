@@ -4,7 +4,7 @@
  * Mọi kiểm tra quyền trên server (API routes) và mọi hiển thị menu trên
  * sidebar đều đọc từ đây, để tài liệu và code không bao giờ lệch nhau.
  *
- * Phiên bản rút gọn: chỉ còn 4 vai trò (đã bỏ Thư kí phòng, Trưởng nhóm,
+ * Phiên bản rút gọn: chỉ còn 4 vai trò (đã bỏ Thư ký phòng, Trưởng nhóm,
  * Chuyên viên). Trưởng phòng giờ tự chia nhỏ & tự quản lý toàn bộ công
  * việc của phòng mình bằng Kanban cấp Phòng, không cần bước duyệt nữa vì
  * không còn ai nộp việc lên để chờ duyệt.
@@ -16,8 +16,8 @@ export type RoleCode = (typeof ROLE_CODES)[number];
 
 export const ROLE_LABELS: Record<RoleCode, string> = {
   admin: "Quản trị hệ thống",
-  bgd: "Ban giám đốc",
-  tkph: "Thư kí phân hiệu",
+  bgd: "Ban Giám Đốc",
+  tkph: "Thư ký Phân Hiệu",
   truong_phong: "Trưởng phòng",
 };
 
@@ -32,7 +32,7 @@ export const ROLE_SCOPE: Record<RoleCode, "none" | "department"> = {
 export const MODULE_CODES = [
   "users", // Quản lý người dùng & phân quyền
   "meetings", // Biên bản họp chủ chốt
-  "branch_tasks", // Nhiệm vụ cấp Phân hiệu
+  "branch_tasks", // Nhiệm vụ cấp Phân Hiệu
   "department_tasks", // Nhiệm vụ cấp Phòng
   "reports", // Báo cáo & thống kê
 ] as const;
@@ -44,9 +44,9 @@ export type Action = "create" | "view" | "assign" | "update_status" | "comment";
 export const MODULE_LABELS: Record<ModuleCode, string> = {
   users: "Quản lý người dùng & phân quyền",
   meetings: "Biên bản họp chủ chốt",
-  branch_tasks: "Nhiệm vụ cấp Phân hiệu",
+  branch_tasks: "Nhiệm vụ cấp Phân Hiệu",
   department_tasks: "Nhiệm vụ cấp Phòng",
-  reports: "Báo cáo & Thống kê",
+  reports: "Báo cáo & thống kê",
 };
 
 /**
@@ -104,18 +104,18 @@ export const ROLE_NAV_ITEMS: Record<RoleCode, NavItem[]> = {
     { href: "/dashboard/reports", label: "Báo cáo tổng thể", icon: "BarChart3", module: "reports" },
   ],
   bgd: [
-    { href: "/dashboard/branch-tasks", label: "Tiến độ Phân hiệu", icon: "Building2", module: "branch_tasks" },
+    { href: "/dashboard/branch-tasks", label: "Tiến độ Phân Hiệu", icon: "Building2", module: "branch_tasks" },
     { href: "/dashboard/meetings", label: "Biên bản họp", icon: "FileText", module: "meetings" },
-    { href: "/dashboard/reports", label: "Báo cáo & Thống kê", icon: "BarChart3", module: "reports" },
+    { href: "/dashboard/reports", label: "Báo cáo & thống kê", icon: "BarChart3", module: "reports" },
   ],
   tkph: [
     { href: "/dashboard/meetings", label: "Biên bản họp", icon: "FileText", module: "meetings" },
-    { href: "/dashboard/branch-tasks", label: "Phân bổ cấp Phân hiệu", icon: "Building2", module: "branch_tasks" },
-    { href: "/dashboard/reports", label: "Báo cáo & Thống kê", icon: "BarChart3", module: "reports" },
+    { href: "/dashboard/branch-tasks", label: "Phân bổ cấp Phân Hiệu", icon: "Building2", module: "branch_tasks" },
+    { href: "/dashboard/reports", label: "Báo cáo & thống kê", icon: "BarChart3", module: "reports" },
   ],
   truong_phong: [
-    { href: "/dashboard/branch-tasks", label: "Nhiệm vụ Phân hiệu giao", icon: "Building2", module: "branch_tasks" },
+    { href: "/dashboard/branch-tasks", label: "Nhiệm vụ Phân Hiệu giao", icon: "Building2", module: "branch_tasks" },
     { href: "/dashboard/department-tasks", label: "Kanban cấp Phòng", icon: "KanbanSquare", module: "department_tasks" },
-    { href: "/dashboard/reports", label: "Báo cáo & Thống kê", icon: "BarChart3", module: "reports" },
+    { href: "/dashboard/reports", label: "Báo cáo & thống kê", icon: "BarChart3", module: "reports" },
   ],
 };

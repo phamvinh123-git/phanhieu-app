@@ -3,7 +3,7 @@ import { writeFileSync } from "fs";
 import { runSeed } from "./seed-logic";
 
 async function main() {
-  console.log("Seeding database (cơ cấu thật Phân hiệu Thanh Hóa)...");
+  console.log("Seeding database (cơ cấu thật Phân Hiệu Thanh Hóa)...");
 
   // Khi SEED_DEFAULT_PASSWORD được đặt (dùng lúc seed môi trường production),
   // TẤT CẢ tài khoản dùng chung 1 mật khẩu khởi tạo này thay vì mật khẩu

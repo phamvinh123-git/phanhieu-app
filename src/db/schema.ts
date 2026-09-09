@@ -19,13 +19,13 @@ import { relations } from "drizzle-orm";
 // user_roles (ví dụ vừa là Trưởng phòng A, vừa hỗ trợ như Trưởng phòng B).
 export const roleCodeEnum = pgEnum("role_code", [
   "admin", // Quản trị hệ thống
-  "bgd", // Ban giám đốc
-  "tkph", // Thư kí phân hiệu
+  "bgd", // Ban Giám Đốc
+  "tkph", // Thư ký Phân Hiệu
   "truong_phong", // Trưởng phòng
 ]);
 
 export const taskLevelEnum = pgEnum("task_level", [
-  "branch", // Nhiệm vụ cấp Phân hiệu (từ biên bản họp, TKPH giao cho Phòng)
+  "branch", // Nhiệm vụ cấp Phân Hiệu (từ biên bản họp, TKPH giao cho Phòng)
   "department", // Nhiệm vụ cấp Phòng (Trưởng phòng tự chia nhỏ & tự quản lý)
 ]);
 
@@ -65,7 +65,7 @@ export const users = pgTable("users", {
 });
 
 // Một dòng = một "vai trò trong một phạm vi" của một người.
-// - admin, bgd, tkph: departmentId = null (phạm vi toàn phân hiệu)
+// - admin, bgd, tkph: departmentId = null (phạm vi toàn Phân Hiệu)
 // - truong_phong: departmentId bắt buộc (phạm vi 1 phòng cụ thể)
 export const userRoles = pgTable("user_roles", {
   id: serial("id").primaryKey(),
@@ -111,9 +111,9 @@ export const tasks = pgTable("tasks", {
   }),
 
   // Nhiệm vụ cấp Phòng luôn gắn với đúng 1 Phòng (cột này bắt buộc ở cấp đó).
-  // Nhiệm vụ cấp Phân hiệu có thể liên quan NHIỀU Phòng cùng lúc — phạm vi
+  // Nhiệm vụ cấp Phân Hiệu có thể liên quan NHIỀU Phòng cùng lúc — phạm vi
   // thật sự của nó nằm ở bảng task_departments bên dưới; cột này để trống
-  // (null) đối với nhiệm vụ cấp Phân hiệu.
+  // (null) đối với nhiệm vụ cấp Phân Hiệu.
   departmentId: integer("department_id").references(() => departments.id, {
     onDelete: "cascade",
   }),
@@ -124,7 +124,7 @@ export const tasks = pgTable("tasks", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Nhiệm vụ cấp Phân hiệu <-> Phòng ban liên quan (nhiều-nhiều). Một nhiệm vụ
+// Nhiệm vụ cấp Phân Hiệu <-> Phòng ban liên quan (nhiều-nhiều). Một nhiệm vụ
 // gắn với nhiều Phòng nghĩa là các Phòng đó CÙNG phối hợp thực hiện — mọi
 // Trưởng phòng liên quan đều thấy chung 1 thẻ việc trong Kanban của mình,
 // dùng chung 1 trạng thái, và ai cũng có thể cập nhật/bình luận.

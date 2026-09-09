@@ -20,7 +20,7 @@ type Task = {
   priority: "low" | "normal" | "high" | "urgent";
   parentTaskId: number | null;
   departmentId: number | null; // dùng cho cấp Phòng
-  departments?: Department[]; // dùng cho cấp Phân hiệu (có thể nhiều Phòng)
+  departments?: Department[]; // dùng cho cấp Phân Hiệu (có thể nhiều Phòng)
   createdBy: string | null;
   dueDate: string | null;
   meetingId: number | null;
@@ -110,7 +110,7 @@ export function KanbanBoard({
       .then((data) => setDepartments(data.departments ?? []));
   }, [loadTasks]);
 
-  // Chỉ nhiệm vụ cấp Phân hiệu mới gắn với 1 cuộc họp cụ thể (được trích
+  // Chỉ nhiệm vụ cấp Phân Hiệu mới gắn với 1 cuộc họp cụ thể (được trích
   // xuất từ biên bản họp) — nhiệm vụ cấp Phòng không có mục lọc này. Một số
   // vai trò (Trưởng phòng) không có quyền xem "meetings" nên bỏ qua lỗi nếu
   // có, mục lọc sẽ tự ẩn khi danh sách cuộc họp rỗng.

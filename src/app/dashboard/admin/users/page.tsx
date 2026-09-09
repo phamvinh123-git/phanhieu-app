@@ -233,7 +233,7 @@ function RoleRowsEditor({
                     ))}
                   </select>
                 )}
-                {scopeKind === "none" && <span className="flex-1 text-xs text-slate-400">Phạm vi toàn phân hiệu</span>}
+                {scopeKind === "none" && <span className="flex-1 text-xs text-slate-400">Phạm vi toàn Phân Hiệu</span>}
 
                 {roleRows.length > 1 && (
                   <button

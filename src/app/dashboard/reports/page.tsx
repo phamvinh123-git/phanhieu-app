@@ -11,7 +11,7 @@ type LevelSummary = {
 };
 
 const LEVEL_TITLES: Record<string, string> = {
-  branch: "Cấp Phân hiệu",
+  branch: "Cấp Phân Hiệu",
   department: "Cấp Phòng",
 };
 
@@ -43,9 +43,9 @@ export default function ReportsPage() {
           <BarChart3 className="h-4.5 w-4.5" />
         </span>
         <div>
-          <h1 className="text-xl font-semibold text-slate-900">Báo cáo &amp; Thống kê tiến độ</h1>
+          <h1 className="text-xl font-semibold text-slate-900">Báo cáo &amp; thống kê tiến độ</h1>
           <p className="text-sm text-slate-500">
-            Số liệu chỉ hiển thị trong phạm vi bạn được phép xem (toàn phân hiệu, phòng, nhóm, hoặc cá nhân).
+            Số liệu chỉ hiển thị trong phạm vi bạn được phép xem (toàn Phân Hiệu, phòng, nhóm, hoặc cá nhân).
           </p>
         </div>
       </div>

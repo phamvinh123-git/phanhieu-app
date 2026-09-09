@@ -56,7 +56,7 @@ export async function runSeed(defaultPassword?: string | null): Promise<SeedResu
     { code: "QLDT", name: "Phòng Quản lý Đào tạo" },
     { code: "YHCS", name: "Bộ môn Y học Cơ sở" },
     { code: "TTRA", name: "Tổ Thanh tra" },
-    { code: "LCD", name: "Liên chi đoàn Phân hiệu Thanh Hóa" },
+    { code: "LCD", name: "Liên chi đoàn Phân Hiệu Thanh Hóa" },
     { code: "NCKH", name: "Tổ Nghiên cứu khoa học và Hợp tác quốc tế" },
   ];
   const dept: Record<string, typeof departments.$inferSelect> = {};
@@ -72,28 +72,28 @@ export async function runSeed(defaultPassword?: string | null): Promise<SeedResu
     title: "Quản trị kỹ thuật (đề nghị giao cho bộ phận CNTT)",
   });
 
-  // ---- Ban giám đốc -----------------------------------------------------------
+  // ---- Ban Giám Đốc -----------------------------------------------------------
   const tung = await mkUser({
     fullName: "PGS.TS. Lê Đình Tùng",
     email: "tung@hmu.edu.vn",
-    title: "Phụ trách Phân hiệu",
+    title: "Phụ trách Phân Hiệu",
   });
   const thuc = await mkUser({
     fullName: "TS. Cầm Bá Thức",
     email: "cambathuc@hmu.edu.vn",
-    title: "Phó Giám đốc Phân hiệu",
+    title: "Phó Giám đốc Phân Hiệu",
   });
 
-  // ---- Thư kí phân hiệu ---------------------------------------------------------
+  // ---- Thư ký Phân Hiệu ---------------------------------------------------------
   const linh = await mkUser({
     fullName: "Hoàng Thùy Linh",
     email: "hoangthuylinh@hmu.edu.vn",
-    title: "Thư kí Phân hiệu",
+    title: "Thư ký Phân Hiệu",
   });
   const minh = await mkUser({
     fullName: "Lê Thị Minh",
     email: "lethiminh@hmu.edu.vn",
-    title: "Thư kí Phân hiệu",
+    title: "Thư ký Phân Hiệu",
   });
 
   // ---- Trưởng phòng / phụ trách các đơn vị ------------------------------------
@@ -166,7 +166,7 @@ export async function runSeed(defaultPassword?: string | null): Promise<SeedResu
   const [meeting] = await db
     .insert(meetings)
     .values({
-      title: "Họp giao ban Phân hiệu quý III/2026",
+      title: "Họp giao ban Phân Hiệu quý III/2026",
       meetingDate: new Date("2026-08-10"),
       content: meetingContent,
       status: "reviewed",

@@ -13,9 +13,9 @@ type IncomingTask = {
 };
 
 /**
- * Tạo biên bản họp VÀ toàn bộ nhiệm vụ cấp Phân hiệu được trích xuất từ đó
+ * Tạo biên bản họp VÀ toàn bộ nhiệm vụ cấp Phân Hiệu được trích xuất từ đó
  * trong một lần — dùng ở bước cuối "Gửi cho các phòng ban" ngay sau khi
- * Thư kí phân hiệu rà soát/sửa danh sách nhiệm vụ được trích xuất.
+ * Thư ký Phân Hiệu rà soát/sửa danh sách nhiệm vụ được trích xuất.
  */
 export async function POST(req: NextRequest) {
   const session = await requireSession();

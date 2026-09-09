@@ -88,9 +88,9 @@ export default function DashboardHome() {
         <h2 className="mb-3 text-sm font-semibold text-slate-700">Luồng phân công công việc</h2>
         <ol className="space-y-3 text-sm text-slate-600">
           {[
-            <>Sau cuộc họp chủ chốt, <b>Thư kí phân hiệu</b> rà soát biên bản và tạo nhiệm vụ cấp Phân hiệu, giao cho các Phòng.</>,
+            <>Sau cuộc họp chủ chốt, <b>Thư ký Phân Hiệu</b> rà soát biên bản và tạo nhiệm vụ cấp Phân Hiệu, giao cho các Phòng.</>,
             <><b>Trưởng phòng</b> nhận nhiệm vụ, tự chia nhỏ thành các việc cấp Phòng và tự quản lý bằng Kanban cho đến khi hoàn thành.</>,
-            <><b>Ban giám đốc</b> theo dõi tiến độ toàn phân hiệu qua báo cáo tổng hợp từ Thư kí phân hiệu.</>,
+            <><b>Ban Giám Đốc</b> theo dõi tiến độ toàn Phân Hiệu qua báo cáo tổng hợp từ Thư ký Phân Hiệu.</>,
           ].map((text, i) => (
             <motion.li
               key={i}

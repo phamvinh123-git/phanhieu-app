@@ -76,7 +76,7 @@ async function getDepartmentLeadEmails(departmentIds: number[]): Promise<string[
 }
 
 /**
- * Gửi thông báo khi Thư kí phân hiệu vừa giao nhiệm vụ cấp Phân hiệu cho
+ * Gửi thông báo khi Thư ký Phân Hiệu vừa giao nhiệm vụ cấp Phân Hiệu cho
  * các Phòng (sau bước "Gửi cho các phòng ban" trong luồng biên bản họp).
  */
 export async function notifyBranchTasksAssigned(
@@ -96,7 +96,7 @@ export async function notifyBranchTasksAssigned(
     await sendMail(
       to,
       `[Phân Hiệu Thanh Hóa] Nhiệm vụ mới: ${task.title}`,
-      `<p>Phòng của bạn (${deptNames.join(", ")}) vừa được Thư kí phân hiệu giao nhiệm vụ mới sau cuộc họp:</p>
+      `<p>Phòng của bạn (${deptNames.join(", ")}) vừa được Thư ký Phân Hiệu giao nhiệm vụ mới sau cuộc họp:</p>
        <p style="font-size:16px;font-weight:600">${task.title}</p>
        <p>Hạn hoàn thành: <b>${dueText}</b></p>
        <p><a href="${appUrl()}/dashboard/branch-tasks">Xem chi tiết trong hệ thống</a></p>`
@@ -105,7 +105,7 @@ export async function notifyBranchTasksAssigned(
 }
 
 /**
- * Gửi nhắc hạn cho các nhiệm vụ (cấp Phân hiệu hoặc cấp Phòng) sắp đến hạn
+ * Gửi nhắc hạn cho các nhiệm vụ (cấp Phân Hiệu hoặc cấp Phòng) sắp đến hạn
  * mà chưa hoàn thành. Được gọi từ endpoint /api/cron/due-date-reminders,
  * dự kiến do một scheduler bên ngoài (vd. Render Cron Job) gọi định kỳ.
  */

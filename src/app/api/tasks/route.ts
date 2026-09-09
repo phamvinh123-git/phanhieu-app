@@ -11,7 +11,7 @@ const LEVEL_MODULE: Record<string, ModuleCode> = {
   department: "department_tasks",
 };
 
-/** Gắn danh sách Phòng (id + code + name) cho từng nhiệm vụ cấp Phân hiệu. */
+/** Gắn danh sách Phòng (id + code + name) cho từng nhiệm vụ cấp Phân Hiệu. */
 async function attachDepartments<T extends { id: number; level: string }>(rows: T[]) {
   if (rows.length === 0) return rows.map((r) => ({ ...r, departments: [] as { id: number; code: string; name: string }[] }));
   const ids = rows.map((r) => r.id);

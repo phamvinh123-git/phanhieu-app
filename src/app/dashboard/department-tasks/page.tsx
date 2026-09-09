@@ -5,7 +5,7 @@ export default function DepartmentTasksPage() {
     <KanbanBoard
       level="department"
       title="Kanban cấp Phòng"
-      description="Trưởng phòng tự chia nhỏ nhiệm vụ được Phân hiệu giao và tự quản lý tiến độ tại đây."
+      description="Trưởng phòng tự chia nhỏ nhiệm vụ được Phân Hiệu giao và tự quản lý tiến độ tại đây."
     />
   );
 }

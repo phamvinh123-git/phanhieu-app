@@ -4,8 +4,8 @@ export default function BranchTasksPage() {
   return (
     <KanbanBoard
       level="branch"
-      title="Nhiệm vụ cấp Phân hiệu"
-      description="Công việc do Thư kí phân hiệu phân bổ cho các Phòng sau mỗi cuộc họp chủ chốt."
+      title="Nhiệm vụ cấp Phân Hiệu"
+      description="Công việc do Thư ký Phân Hiệu phân bổ cho các Phòng sau mỗi cuộc họp chủ chốt."
     />
   );
 }

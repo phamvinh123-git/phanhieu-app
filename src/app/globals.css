@@ -13,7 +13,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, Helvetica, sans-serif;
+  font-family: "Tinos", "Times New Roman", Times, "Liberation Serif", serif;
 }
 
 /* ---- Nền lưới điểm mờ kiểu Microsoft To Do (App Shell) ---- */
@@ -141,6 +141,32 @@ body {
 }
 .animate-sidebar-glow {
   animation: sidebar-glow 2.4s ease-in-out infinite;
+}
+
+/* ---- Logo hình tròn "lấp lánh": vòng sáng xoay quanh viền + đốm sao nhấp
+   nháy (xem components/LogoBadge.tsx) ---- */
+@keyframes logo-ring {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-logo-ring {
+  animation: logo-ring 4s linear infinite;
+}
+
+@keyframes logo-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(25deg);
+  }
+}
+.animate-logo-twinkle {
+  animation: logo-twinkle 2.4s ease-in-out infinite;
 }
 
 /* Thanh cuộn mảnh, tinh tế hơn mặc định trình duyệt */

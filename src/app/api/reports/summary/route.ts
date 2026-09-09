@@ -15,7 +15,7 @@ export async function GET() {
   const depts = await db.select().from(departments);
   const result: Record<string, unknown> = {};
 
-  // ---- Cấp Phân hiệu (có thể liên nhiều Phòng / nhiệm vụ) -------------------
+  // ---- Cấp Phân Hiệu (có thể liên nhiều Phòng / nhiệm vụ) -------------------
   {
     const moduleCode: ModuleCode = "branch_tasks";
     const scope = resolveScope(session, moduleCode, "view");

@@ -5,7 +5,7 @@ import { can, type Action, type ModuleCode, type RoleCode } from "./rbac-config"
  * Phạm vi hiệu lực (effective scope) của một người dùng đối với một hành
  * động trên một module, tổng hợp từ TẤT CẢ vai trò họ đang giữ.
  *
- * all = true  -> được xem/thao tác toàn phân hiệu (admin, bgd, tkph...)
+ * all = true  -> được xem/thao tác toàn Phân Hiệu (admin, bgd, tkph...)
  * ngược lại   -> chỉ giới hạn trong danh sách departmentIds bên dưới
  */
 export type ScopeFilter = {

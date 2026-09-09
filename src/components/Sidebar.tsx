@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -19,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import { useMe } from "./MeProvider";
+import { LogoBadge } from "./LogoBadge";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Users,
@@ -59,9 +59,8 @@ export function Sidebar() {
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 18 }}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-red-100"
         >
-          <Image src="/logo.png" alt="Logo" width={34} height={34} className="h-full w-full object-contain" />
+          <LogoBadge size="md" />
         </motion.div>
         <div>
           <p className="text-sm font-semibold leading-tight text-slate-900">Đại học Y Hà Nội</p>
@@ -160,9 +159,7 @@ export function Sidebar() {
       {/* Thanh trên cùng chỉ hiện trên di động (< md): logo + nút mở menu */}
       <div className="flex items-center justify-between border-b border-red-100/70 bg-white px-4 py-3 md:hidden">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-red-100">
-            <Image src="/logo.png" alt="Logo" width={26} height={26} className="h-full w-full object-contain" />
-          </div>
+          <LogoBadge size="sm" />
           <div>
             <p className="text-sm font-semibold leading-tight text-slate-900">Đại học Y Hà Nội</p>
             <p className="text-[11px] leading-tight text-red-600">Phân Hiệu Thanh Hóa</p>
