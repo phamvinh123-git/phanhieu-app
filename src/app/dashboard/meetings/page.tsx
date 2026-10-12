@@ -174,7 +174,7 @@ type ExtractedRow = {
 
 type SkippedLine = { line: string; reason: "no_tag" | "unmatched_codes"; unmatchedCodes?: string[] };
 
-const EXAMPLE_TEXT = `1. Hoàn thiện kế hoạch tuyển sinh đợt bổ sung, gửi Ban Giám Đốc trước 25/8 (DT).
+const EXAMPLE_TEXT = `1. Hoàn thiện kế hoạch tuyển sinh đợt bổ sung, gửi Ban Giám Đốc trước 25/08/2026 (DT).
 2. Rà soát lại quy chế chi tiêu nội bộ, phối hợp cung cấp số liệu (HCTH, DT).
 3. Chuẩn bị cơ sở vật chất phòng học cho đợt nhập học mới (HCTH).`;
 
@@ -219,13 +219,13 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
     }
     const data = await res.json();
     setRows(
-      (data.tasks as { line: string; title: string; departmentIds: number[] }[]).map((t, i) => ({
+      (data.tasks as { line: string; title: string; departmentIds: number[]; dueDate: string | null }[]).map((t, i) => ({
         key: `${i}-${t.line}`,
         line: t.line,
         title: t.title,
         departmentIds: t.departmentIds,
         priority: "normal",
-        dueDate: "",
+        dueDate: t.dueDate ?? "",
       }))
     );
     setSkipped(data.skipped ?? []);

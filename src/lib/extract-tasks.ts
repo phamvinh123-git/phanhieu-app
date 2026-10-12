@@ -12,6 +12,10 @@
  *   trùng với cột `code` của bảng departments) phụ trách việc đó.
  * - Nhiều mã cách nhau bởi dấu phẩy / dấu gạch chéo / dấu "&" / chữ "và"
  *   nghĩa là nhiều Phòng cùng phối hợp thực hiện việc đó.
+ * - Hạn hoàn thành: nếu trong dòng có ngày dạng d/mm/yyyy (vd. "5/11/2026",
+ *   "05/11/2026" hoặc "05-11-2026") — nằm ở bất kỳ đâu, kể cả trong ngoặc cùng
+ *   mã phòng như "(DT, 05/11/2026)" — thì lấy làm hạn (dueDate, dạng yyyy-mm-dd).
+ *   Ngày không hợp lệ (vd. 31/02/2026) bị bỏ qua.
  * - Dòng không có ngoặc, hoặc ngoặc không chứa mã phòng hợp lệ nào, sẽ
  *   KHÔNG được coi là đầu việc (có thể là tiêu đề mục, ghi chú chung...).
  */
@@ -23,6 +27,7 @@ export type ExtractedTask = {
   title: string; // tiêu đề đã làm sạch (bỏ số thứ tự + phần trong ngoặc)
   departmentIds: number[];
   departmentCodes: string[];
+  dueDate: string | null; // yyyy-mm-dd, null nếu dòng không có ngày
 };
 
 export type SkippedLine = {
@@ -39,6 +44,22 @@ export type ExtractResult = {
 const BULLET_PREFIX = /^\s*(?:[-*•]|\d+[.)]|\(\d+\))\s*/;
 const TRAILING_TAG = /^(.*?)\s*\(([^()]{1,120})\)\s*[.;:!?]*\s*$/;
 const TOKEN_SPLIT = /[,/;&]+|\s+(?:va|và)\s+/i;
+
+const DATE_RE = /\b(\d{1,2})[/-](\d{1,2})[/-](\d{4})\b/g;
+
+/** Tìm ngày d/mm/yyyy hợp lệ đầu tiên; trả về dạng yyyy-mm-dd. */
+function findDate(text: string): string | null {
+  for (const m of text.matchAll(DATE_RE)) {
+    const d = Number(m[1]);
+    const mo = Number(m[2]);
+    const y = Number(m[3]);
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    if (dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d) {
+      return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    }
+  }
+  return null;
+}
 
 function cleanTitle(raw: string): string {
   let t = raw.trim();
@@ -61,6 +82,7 @@ export function extractTasksFromMinutes(content: string, departments: Department
 
   for (const rawLine of lines) {
     const line = rawLine.replace(BULLET_PREFIX, "").trim();
+    const dueDate = findDate(line);
     const match = line.match(TRAILING_TAG);
     if (!match) {
       skipped.push({ line: rawLine, reason: "no_tag" });
@@ -69,6 +91,7 @@ export function extractTasksFromMinutes(content: string, departments: Department
 
     const [, titlePart, tagPart] = match;
     const tokens = tagPart
+      .replace(DATE_RE, " ") // ngày trong ngoặc không phải mã phòng
       .split(TOKEN_SPLIT)
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
@@ -101,6 +124,7 @@ export function extractTasksFromMinutes(content: string, departments: Department
       title,
       departmentIds: uniqueDepts.map((d) => d.id),
       departmentCodes: uniqueDepts.map((d) => d.code),
+      dueDate,
     });
   }
 
