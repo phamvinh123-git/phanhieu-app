@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, ArrowRight, ShieldCheck } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 import { LogoBadge } from "@/components/LogoBadge";
 
 export default function LoginPage() {
@@ -52,7 +52,7 @@ export default function LoginPage() {
 
       <div className="relative grid w-full max-w-4xl overflow-hidden rounded-3xl border border-red-100 bg-white shadow-2xl shadow-red-900/10 md:grid-cols-5">
         {/* Panel thương hiệu */}
-        <div className="relative col-span-2 hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-red-700 via-red-600 to-rose-700 p-8 text-white md:flex">
+        <div className="relative col-span-2 hidden flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-red-700 via-red-600 to-rose-700 p-8 text-white md:flex">
           <div className="pointer-events-none absolute inset-0 opacity-25">
             <div className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/40 animate-ring-pulse" />
             <div
@@ -61,22 +61,13 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="relative animate-fade-in-up">
+          <div className="relative flex flex-col items-center text-center animate-fade-in-up">
             <LogoBadge size="lg" />
-          </div>
-
-          <div className="relative animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
-            <h1 className="text-xl font-bold leading-snug">Trường Đại học Y Hà Nội</h1>
-            <p className="mt-1 text-2xl font-bold leading-snug">Phân Hiệu Thanh Hóa</p>
-            <p className="mt-3 text-sm leading-relaxed text-red-50/90">
-              Hệ thống phân công &amp; theo dõi công việc nội bộ — kết nối Ban Giám Đốc, Thư ký
-              Phân Hiệu và các Phòng ban trong cùng một quy trình.
-            </p>
-          </div>
-
-          <div className="relative flex items-center gap-2 text-xs text-red-100/80 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-            <ShieldCheck className="h-4 w-4" />
-            Truy cập nội bộ — chỉ dành cho cán bộ được cấp tài khoản
+            <h1 className="mt-6 text-xl font-bold leading-snug">
+              Phân hiệu Đại học Y Hà Nội
+              <br />
+              tại tỉnh Thanh Hóa
+            </h1>
           </div>
         </div>
 
