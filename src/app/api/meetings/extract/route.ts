@@ -15,7 +15,8 @@ export async function POST(req: NextRequest) {
   if (!content.trim()) return jsonError("Nội dung biên bản đang trống");
 
   const depts = await db.select().from(departments);
-  const result = extractTasksFromMinutes(content, depts);
+  const meetingDate = typeof body?.meetingDate === "string" ? body.meetingDate : undefined;
+  const result = extractTasksFromMinutes(content, depts, { referenceDate: meetingDate });
 
   return NextResponse.json(result);
 }

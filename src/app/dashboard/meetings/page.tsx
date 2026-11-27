@@ -239,13 +239,19 @@ type ExtractedRow = {
   departmentIds: number[];
   priority: "low" | "normal" | "high" | "urgent";
   dueDate: string;
+  autoDue: boolean; // hạn do hệ thống tự nhận diện
+  source: "tag" | "mention" | "section";
+  section?: string;
 };
 
 type SkippedLine = { line: string; reason: "no_tag" | "unmatched_codes"; unmatchedCodes?: string[] };
 
-const EXAMPLE_TEXT = `1. Hoàn thiện kế hoạch tuyển sinh đợt bổ sung, gửi Ban Giám Đốc trước 25/08/2026 (DT).
-2. Rà soát lại quy chế chi tiêu nội bộ, phối hợp cung cấp số liệu (HCTH, DT).
-3. Chuẩn bị cơ sở vật chất phòng học cho đợt nhập học mới (HCTH).`;
+const EXAMPLE_TEXT = `1. Rà soát chương trình đào tạo học kỳ mới trước 25/8 (QLDT).
+2. Giao Phòng Tổ chức - Hành chính - Quản trị chủ trì, phối hợp TCKT chuẩn bị quy chế chi tiêu nội bộ, hoàn thành trong tháng 9.
+
+II. Phòng Khảo thí và Đảm bảo Chất lượng giáo dục:
+- Khẩn trương hoàn thiện hồ sơ tự đánh giá, chậm nhất ngày 15/10/2026.
+- Tổ chức thi kết thúc học phần; tổng hợp kết quả thi học kỳ I.`;
 
 const inputCls = "field";
 
@@ -277,7 +283,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
     const res = await fetch("/api/meetings/extract", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, meetingDate }),
     });
     setExtracting(false);
     if (!res.ok) {
@@ -287,13 +293,26 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
     }
     const data = await res.json();
     setRows(
-      (data.tasks as { line: string; title: string; departmentIds: number[]; dueDate: string | null }[]).map((t, i) => ({
+      (
+        data.tasks as {
+          line: string;
+          title: string;
+          departmentIds: number[];
+          dueDate: string | null;
+          priority: ExtractedRow["priority"];
+          source: ExtractedRow["source"];
+          section?: string;
+        }[]
+      ).map((t, i) => ({
         key: `${i}-${t.line}`,
         line: t.line,
         title: t.title,
         departmentIds: t.departmentIds,
-        priority: "normal",
+        priority: t.priority ?? "normal",
         dueDate: t.dueDate ?? "",
+        autoDue: Boolean(t.dueDate),
+        source: t.source ?? "tag",
+        section: t.section,
       }))
     );
     setSkipped(data.skipped ?? []);
@@ -415,15 +434,18 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
               </div>
             </div>
             <div>
-              <label className="field-label">
-                Nội dung biên bản — mỗi dòng là một đầu việc, đặt mã Phòng trong ngoặc ở cuối dòng
-                (nhiều Phòng thì cách nhau bằng dấu phẩy). Mã Phòng hiện có:{" "}
-                {departments.map((d) => d.code).join(", ") || "..."}
-              </label>
+              <label className="field-label">Nội dung biên bản</label>
+              <div className="mb-2 rounded-lg bg-background p-3 text-xs leading-relaxed text-muted">
+                Dán nguyên biên bản vào đây. Hệ thống tự nhận Phòng phụ trách khi: có mã trong ngoặc cuối dòng{" "}
+                <b className="text-ink">(QLDT, TCKT)</b>; câu nhắc tên hoặc mã Phòng (“Giao Phòng Quản lý Đào tạo chủ
+                trì…”, “Phòng TCKT: …”); hoặc các gạch đầu dòng nằm dưới tiêu đề mục của một Phòng. Hạn hoàn thành
+                nhận được: 25/8, 25/08/2026, “ngày 25 tháng 8”, “trong tháng 9”, “trước quý IV”, “tuần sau”. Mã Phòng
+                hiện có: <b className="text-ink">{departments.map((d) => d.code).join(", ") || "..."}</b>
+              </div>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                rows={10}
+                rows={12}
                 placeholder={EXAMPLE_TEXT}
                 className={`${inputCls} font-mono text-[13px]`}
               />
@@ -464,9 +486,14 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="space-y-3"
           >
-            <p className="text-sm text-slate-500">
-              Trích xuất được <b>{rows.length}</b> nhiệm vụ. Kiểm tra lại tiêu đề, Phòng phụ trách
-              trước khi gửi — có thể sửa hoặc xoá từng dòng.
+            <p className="text-sm text-muted">
+              Trích xuất được <b className="text-ink">{rows.length}</b> nhiệm vụ
+              {rows.length > 0 && (
+                <>
+                  {" "}· <b className="text-ink">{rows.filter((r) => r.dueDate).length}</b> có hạn hoàn thành
+                </>
+              )}
+              . Kiểm tra lại tiêu đề, Phòng phụ trách và hạn trước khi gửi — có thể sửa hoặc xoá từng dòng.
             </p>
 
             {skipped.length > 0 && (
@@ -480,7 +507,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                       {s.line}
                       {s.reason === "unmatched_codes" && s.unmatchedCodes?.length
                         ? ` — mã không nhận diện được: ${s.unmatchedCodes.join(", ")}`
-                        : " — không có mã Phòng trong ngoặc ở cuối dòng"}
+                        : " — không xác định được Phòng phụ trách"}
                     </li>
                   ))}
                 </ul>
@@ -512,6 +539,11 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
+                    <p className="mb-2 text-xs text-muted">
+                      {r.source === "tag" && "Phòng lấy từ mã trong ngoặc"}
+                      {r.source === "mention" && "Phòng lấy từ nội dung câu"}
+                      {r.source === "section" && `Phòng lấy theo mục: ${r.section ?? ""}`}
+                    </p>
                     <div className="mb-2 flex flex-wrap gap-1.5">
                       {departments.map((d) => (
                         <motion.button
@@ -530,7 +562,9 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                       ))}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
+                      <label className="sr-only" htmlFor={`prio-${r.key}`}>Mức ưu tiên</label>
                       <select
+                        id={`prio-${r.key}`}
                         value={r.priority}
                         onChange={(e) => updateRow(r.key, { priority: e.target.value as ExtractedRow["priority"] })}
                         className="field h-9 text-[13px]"
@@ -540,13 +574,24 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                         <option value="high">Ưu tiên cao</option>
                         <option value="urgent">Khẩn cấp</option>
                       </select>
-                      <input
-                        type="date"
-                        value={r.dueDate}
-                        onChange={(e) => updateRow(r.key, { dueDate: e.target.value })}
-                        className="field h-9 text-[13px]"
-                      />
+                      <div>
+                        <label className="sr-only" htmlFor={`due-${r.key}`}>Hạn hoàn thành</label>
+                        <input
+                          id={`due-${r.key}`}
+                          type="date"
+                          value={r.dueDate}
+                          onChange={(e) => updateRow(r.key, { dueDate: e.target.value, autoDue: false })}
+                          className={`field h-9 text-[13px] ${r.dueDate ? "" : "border-[#F5C27A] bg-[#FFF8EE]"}`}
+                        />
+                      </div>
                     </div>
+                    <p className={`mt-1.5 text-xs ${r.dueDate ? "text-done" : "text-[#B45309]"}`}>
+                      {r.dueDate
+                        ? r.autoDue
+                          ? `Hạn tự nhận từ biên bản: ${r.dueDate.split("-").reverse().join("/")}`
+                          : `Hạn: ${r.dueDate.split("-").reverse().join("/")}`
+                        : "Biên bản không ghi hạn cho việc này — hãy chọn hạn nếu cần."}
+                    </p>
                     <AnimatePresence>
                       {r.departmentIds.length === 0 && (
                         <motion.p
@@ -569,7 +614,8 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
               </AnimatePresence>
               {rows.length === 0 && (
                 <p className="rounded-lg bg-background p-4 text-center text-sm text-muted">
-                  Không trích xuất được nhiệm vụ nào. Quay lại và kiểm tra định dạng mã Phòng trong ngoặc.
+                  Không trích xuất được nhiệm vụ nào. Quay lại và ghi rõ Phòng phụ trách (mã trong ngoặc, tên Phòng
+                  trong câu, hoặc tiêu đề mục theo Phòng).
                 </p>
               )}
             </div>
