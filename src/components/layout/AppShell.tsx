@@ -308,7 +308,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
-      <div className="flex min-h-screen flex-col lg:pl-[248px]">
+      {/* Logo Phân hiệu in chìm giữa vùng nội dung, nằm sau mọi thành phần */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-phan-hieu.png" alt="" aria-hidden="true" className="watermark-logo lg:ml-[124px]" />
+
+      <div className="relative z-[1] flex min-h-screen flex-col lg:pl-[248px]">
         <Header onOpenMenu={() => setDrawerOpen(true)} />
         <main className="mx-auto w-full max-w-[1400px] flex-1 px-3 py-5 sm:px-4 lg:px-6 lg:py-6">
           <div className="animate-fade-in-up">{children}</div>

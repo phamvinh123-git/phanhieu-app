@@ -85,8 +85,10 @@ export default function LoginPage() {
       </section>
 
       {/* Form đăng nhập — bên phải */}
-      <section className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-8">
-        <div className="w-full max-w-[400px] animate-fade-in-up">
+      <section className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-10 sm:px-8">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-phan-hieu.png" alt="" aria-hidden="true" className="watermark-logo !absolute" />
+        <div className="relative z-[1] w-full max-w-[400px] animate-fade-in-up">
           <div className="mb-8 flex flex-col items-center text-center lg:hidden">
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white p-1.5 shadow-sm ring-1 ring-line">
               {/* eslint-disable-next-line @next/next/no-img-element */}

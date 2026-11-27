@@ -235,6 +235,21 @@ body {
   }
 }
 
+/* Logo Phân hiệu in chìm: cố định giữa vùng nội dung, rất mờ, không bắt sự kiện chuột */
+.watermark-logo {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: min(70vw, 560px);
+  height: auto;
+  opacity: 0.045;
+  filter: grayscale(30%);
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
 /* Focus rõ ràng cho mọi ô nhập liệu (accessibility) */
 input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus,
