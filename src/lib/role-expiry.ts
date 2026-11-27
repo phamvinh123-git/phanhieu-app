@@ -1,6 +1,7 @@
 import { and, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { userRoles, users } from "@/db/schema";
+import { audit } from "./audit";
 
 /**
  * Vai trò có thời hạn ("Quyền …"): hiệu lực đến HẾT ngày expiresAt (giờ Việt
@@ -36,7 +37,7 @@ export function parseExpiry(v: unknown): Date | null {
 export async function lockExpiredAccounts(onlyUserId?: string): Promise<number> {
   const start = todayStart();
   const candidates = await db
-    .select({ userId: userRoles.userId })
+    .select({ userId: userRoles.userId, fullName: users.fullName })
     .from(userRoles)
     .innerJoin(users, eq(users.id, userRoles.userId))
     .where(
@@ -45,10 +46,18 @@ export async function lockExpiredAccounts(onlyUserId?: string): Promise<number> 
         onlyUserId ? eq(userRoles.userId, onlyUserId) : undefined
       )
     )
-    .groupBy(userRoles.userId)
+    .groupBy(userRoles.userId, users.fullName)
     .having(sql`bool_and(${userRoles.expiresAt} is not null and ${userRoles.expiresAt} < ${start})`);
   const ids = candidates.map((c) => c.userId);
-  if (ids.length) await db.update(users).set({ isActive: false }).where(inArray(users.id, ids));
+  if (ids.length) {
+    await db.update(users).set({ isActive: false }).where(inArray(users.id, ids));
+    for (const c of candidates) {
+      await audit(null, "user.auto_lock", `Tự động tạm khoá tài khoản ${c.fullName} vì mọi quyền đã hết thời hạn`, {
+        entityId: c.userId,
+        actorName: "Hệ thống",
+      });
+    }
+  }
   return ids.length;
 }
 

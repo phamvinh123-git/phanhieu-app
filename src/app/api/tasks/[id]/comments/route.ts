@@ -6,6 +6,7 @@ import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { resolveScope, type ScopeFilter } from "@/lib/permissions";
 import type { ModuleCode } from "@/lib/rbac-config";
 import { notifyComment } from "@/lib/notifications";
+import { audit } from "@/lib/audit";
 
 const LEVEL_MODULE: Record<string, ModuleCode> = {
   branch: "branch_tasks",
@@ -69,6 +70,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .returning();
 
   await notifyComment(Number(id), session, row.content);
+  await audit(session, "task.comment", `Bình luận ở "${check.task?.title ?? `#${id}`}": ${row.content.slice(0, 200)}`, {
+    entityId: Number(id),
+  });
 
   return NextResponse.json({ comment: row }, { status: 201 });
 }

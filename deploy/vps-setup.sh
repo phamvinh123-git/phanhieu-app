@@ -211,6 +211,24 @@ if command -v nginx >/dev/null 2>&1 && [[ "$DOMAIN_HOST" =~ [a-zA-Z] ]]; then
   fi
 fi
 
+# ---- 5c. Gửi IP thật của người dùng vào app (cho Lịch sử truy vết) ----
+# Thêm "proxy_set_header X-Real-IP $remote_addr;" ngay sau dòng proxy_pass tới
+# cổng của app, nếu file cấu hình chưa có. Sao lưu, kiểm tra, lỗi thì khôi phục.
+if command -v nginx >/dev/null 2>&1 && [ -n "${CONF:-}" ] && ! grep -q "X-Real-IP" "$CONF"; then
+  REAL=$(readlink -f "$CONF")
+  if grep -qE "proxy_pass[[:space:]]+http://(127\.0\.0\.1|localhost):${APP_PORT}" "$REAL"; then
+    cp "$REAL" /root/nginx-phanhieu-before-realip.bak
+    sed -i -E "/proxy_pass[[:space:]]+http:\/\/(127\.0\.0\.1|localhost):${APP_PORT}/a\        proxy_set_header X-Real-IP \$remote_addr;" "$REAL"
+    if nginx -t >/dev/null 2>&1; then
+      systemctl reload nginx 2>/dev/null || service nginx reload 2>/dev/null || nginx -s reload
+      echo ">> nginx: đã chuyển IP thật của người dùng vào app"
+    else
+      cp /root/nginx-phanhieu-before-realip.bak "$REAL"
+      echo "!! Không thêm được X-Real-IP vào nginx (đã khôi phục cấu hình cũ)"
+    fi
+  fi
+fi
+
 # ------------------------- 6. Nhắc hạn công việc 08:00 hằng ngày (giờ VN)
 cat > /etc/cron.d/phanhieu-due-date-reminders <<CRON
 CRON_TZ=Asia/Ho_Chi_Minh

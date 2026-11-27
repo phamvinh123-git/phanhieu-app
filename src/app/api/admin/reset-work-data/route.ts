@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meetings, tasks } from "@/db/schema";
+import { audit } from "@/lib/audit";
 
 /**
  * Xoá toàn bộ dữ liệu "công việc đang chạy" (biên bản họp + công việc được
@@ -49,6 +50,9 @@ export async function POST(req: NextRequest) {
   const deletedTasks = await db.delete(tasks).returning({ id: tasks.id });
   const deletedMeetings = await db.delete(meetings).returning({ id: meetings.id });
 
+  await audit(null, "system.reset_work_data", `Xoá toàn bộ ${deletedTasks.length} công việc và ${deletedMeetings.length} biên bản (qua khoá quản trị)`, {
+    actorName: "Khoá quản trị máy chủ",
+  });
   return NextResponse.json({
     ok: true,
     deletedTaskCount: deletedTasks.length,

@@ -6,6 +6,7 @@ import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { ROLE_CODES, ROLE_SCOPE } from "@/lib/rbac-config";
 import { parseExpiry, todayVN } from "@/lib/role-expiry";
+import { audit } from "@/lib/audit";
 
 /**
  * Admin sửa phân quyền của một tài khoản đã có: thay TOÀN BỘ danh sách vai
@@ -71,6 +72,23 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
   });
 
+  if (typeof body?.isActive === "boolean" && body.isActive !== target.isActive) {
+    await audit(session, body.isActive ? "user.unlock" : "user.lock", `${body.isActive ? "Mở khoá" : "Tạm khoá"} tài khoản ${target.fullName}`, {
+      entityId: id,
+    });
+  }
+  if (roleAssignments) {
+    await audit(
+      session,
+      "user.roles",
+      `Cập nhật phân quyền ${target.fullName}: ${roleAssignments
+        .map((r: { role: string; acting?: boolean; expiresAt: Date | null }) =>
+          `${r.acting ? "Quyền " : ""}${r.role}${r.expiresAt ? ` đến ${r.expiresAt.toISOString().slice(0, 10).split("-").reverse().join("/")}` : ""}`
+        )
+        .join(", ")}`,
+      { entityId: id, meta: { roles: roleAssignments } }
+    );
+  }
   const [updatedUser] = await db.select().from(users).where(eq(users.id, id));
   const roles = await db.select().from(userRoles).where(eq(userRoles.userId, id));
   const { passwordHash: _omit, ...safeUser } = updatedUser;

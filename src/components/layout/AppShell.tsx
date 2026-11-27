@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   CalendarDays,
+  History,
 } from "lucide-react";
 import { useMe } from "../MeProvider";
 import { SplashScreen } from "../SplashScreen";
@@ -35,6 +36,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Layers,
   KanbanSquare,
   Newspaper,
+  History,
 };
 
 const HOME = { href: "/dashboard", label: "Tổng quan", icon: "LayoutDashboard" };

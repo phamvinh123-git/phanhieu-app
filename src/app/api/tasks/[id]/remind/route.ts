@@ -7,6 +7,7 @@ import { isLeader } from "@/lib/insights";
 import { recipientsForTask } from "@/lib/notifications";
 import { todayVN } from "@/lib/role-expiry";
 import { sendReminderEmail } from "@/lib/email";
+import { audit } from "@/lib/audit";
 
 /**
  * Lãnh đạo / Thư ký bấm "Nhắc" một nhiệm vụ: gửi thông báo (và email nếu đã cấu
@@ -49,5 +50,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const emails = (await db.select({ email: users.email }).from(users).where(inArray(users.id, to))).map((u) => u.email);
   void sendReminderEmail(emails, { id: task.id, title: task.title, dueDate: task.dueDate }, session.fullName, note);
 
+  await audit(session, "task.remind", `Nhắc nhiệm vụ "${task.title}" (${to.length} người nhận): ${note}`, {
+    entityId: task.id,
+  });
   return NextResponse.json({ ok: true, notified: to.length });
 }

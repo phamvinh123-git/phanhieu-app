@@ -6,6 +6,7 @@ import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { deleteMeetingFile, readMeetingFile } from "@/lib/meeting-files";
 import { canViewMeeting } from "@/lib/meeting-scope";
+import { audit } from "@/lib/audit";
 
 /** Xem (?download=1 để tải về) một file biên bản gốc. */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
@@ -24,6 +25,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
     return jsonError("File không còn trên máy chủ", 404);
   }
   const download = req.nextUrl.searchParams.get("download") === "1";
+  await audit(session, "meeting.file_view", `${download ? "Tải về" : "Xem"} file ${f.originalName} (biên bản #${f.meetingId})`, {
+    entityId: f.meetingId,
+  });
   const inlineOk = f.mimeType === "application/pdf" || f.mimeType.startsWith("image/");
   const disposition = download || !inlineOk ? "attachment" : "inline";
   return new NextResponse(new Uint8Array(data), {
@@ -45,5 +49,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const [f] = await db.delete(meetingFiles).where(eq(meetingFiles.id, Number(fileId))).returning();
   if (!f) return jsonError("Không tìm thấy file", 404);
   await deleteMeetingFile(f.storedName);
+  await audit(session, "meeting.file_delete", `Xoá file ${f.originalName} khỏi biên bản #${f.meetingId}`, { entityId: f.meetingId });
   return NextResponse.json({ ok: true });
 }

@@ -5,6 +5,7 @@ import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { notifyBranchTasksAssigned } from "@/lib/email";
 import { notifyAssigned } from "@/lib/notifications";
+import { audit } from "@/lib/audit";
 
 type IncomingTask = {
   title: string;
@@ -96,5 +97,11 @@ export async function POST(req: NextRequest) {
     session
   );
 
+  await audit(
+    session,
+    "meeting.dispatch",
+    `Giao ${result.tasks.length} nhiệm vụ từ biên bản "${result.meeting.title}"`,
+    { entityId: result.meeting.id, meta: { taskIds: result.tasks.map((t) => t.id) } }
+  );
   return NextResponse.json(result, { status: 201 });
 }

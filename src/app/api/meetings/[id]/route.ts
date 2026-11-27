@@ -4,6 +4,7 @@ import { meetings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
+import { audit } from "@/lib/audit";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireSession();
@@ -23,5 +24,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .returning();
 
   if (!row) return jsonError("Không tìm thấy biên bản họp", 404);
+  await audit(session, "meeting.status", `Biên bản "${row.title}" chuyển sang ${row.status === "reviewed" ? "đã duyệt" : "bản nháp"}`, {
+    entityId: row.id,
+  });
   return NextResponse.json({ meeting: row });
 }

@@ -6,6 +6,7 @@ import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { deleteMeetingFile, saveMeetingFile } from "@/lib/meeting-files";
 import { canViewMeeting } from "@/lib/meeting-scope";
+import { audit } from "@/lib/audit";
 
 /** Danh sách file biên bản gốc của một cuộc họp. */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -54,6 +55,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       rows.push({ ...info, meetingId: meeting.id, uploadedBy: session.userId });
     }
     const inserted = await db.insert(meetingFiles).values(rows).returning();
+    await audit(session, "meeting.file_upload", `Tải lên ${inserted.map((f) => f.originalName).join(", ")} vào biên bản #${meeting.id}`, {
+      entityId: meeting.id,
+    });
     return NextResponse.json({ files: inserted }, { status: 201 });
   } catch (e) {
     await Promise.all(saved.map(deleteMeetingFile));

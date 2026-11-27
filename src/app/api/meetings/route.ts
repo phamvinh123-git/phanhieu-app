@@ -5,6 +5,7 @@ import { desc, inArray, sql } from "drizzle-orm";
 import { visibleMeetingIds } from "@/lib/meeting-scope";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
+import { audit } from "@/lib/audit";
 
 export async function GET() {
   const session = await requireSession();
@@ -49,5 +50,6 @@ export async function POST(req: NextRequest) {
     })
     .returning();
 
+  await audit(session, "meeting.create", `Tạo biên bản họp "${row.title}"`, { entityId: row.id });
   return NextResponse.json({ meeting: row }, { status: 201 });
 }

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hashPassword, verifyPassword } from "@/lib/auth";
+import { audit } from "@/lib/audit";
 
 /**
  * Tự đổi mật khẩu — dùng ngay sau khi đăng nhập lần đầu bằng mật khẩu khởi
@@ -36,6 +37,7 @@ export async function PUT(req: NextRequest) {
 
   const passwordHash = await hashPassword(newPassword);
   await db.update(users).set({ passwordHash }).where(eq(users.id, session.userId));
+  await audit(session, "auth.password_change", "Tự đổi mật khẩu", { entityId: session.userId });
 
   return NextResponse.json({ ok: true });
 }

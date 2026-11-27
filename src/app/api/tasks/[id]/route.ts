@@ -5,6 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction, resolveScope, type ScopeFilter } from "@/lib/permissions";
 import type { ModuleCode } from "@/lib/rbac-config";
+import { audit } from "@/lib/audit";
 
 const LEVEL_MODULE: Record<string, ModuleCode> = {
   branch: "branch_tasks",
@@ -112,5 +113,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   updates.updatedAt = new Date();
   const [row] = await db.update(tasks).set(updates).where(eq(tasks.id, taskId)).returning();
+
+  const STATUS_VN: Record<string, string> = { todo: "Cần làm", in_progress: "Đang thực hiện", done: "Hoàn thành" };
+  if (updates.status) {
+    await audit(
+      session,
+      "task.status",
+      `"${task.title}": ${STATUS_VN[task.status] ?? task.status} → ${STATUS_VN[updates.status] ?? updates.status}`,
+      { entityId: task.id, meta: { from: task.status, to: updates.status } }
+    );
+  }
+  const ymd = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : null);
+  const changed: Record<string, { from: unknown; to: unknown }> = {};
+  if (updates.title !== undefined && updates.title !== task.title) changed.title = { from: task.title, to: updates.title };
+  if (updates.description !== undefined && updates.description !== task.description)
+    changed.description = { from: task.description, to: updates.description };
+  if (updates.priority !== undefined && updates.priority !== task.priority) changed.priority = { from: task.priority, to: updates.priority };
+  if (updates.dueDate !== undefined && ymd(updates.dueDate) !== ymd(task.dueDate))
+    changed.dueDate = { from: ymd(task.dueDate), to: ymd(updates.dueDate) };
+  if (Object.keys(changed).length) {
+    const FIELD_VN: Record<string, string> = { title: "tiêu đề", description: "mô tả", priority: "mức ưu tiên", dueDate: "hạn" };
+    await audit(session, "task.update", `Sửa ${Object.keys(changed).map((k) => FIELD_VN[k]).join(", ")} của "${row.title}"`, {
+      entityId: task.id,
+      meta: changed,
+    });
+  }
   return NextResponse.json({ task: row });
 }

@@ -118,6 +118,7 @@ export const ROLE_NAV_ITEMS: Record<RoleCode, NavItem[]> = {
     { href: "/dashboard/meetings", label: "Biên bản họp", icon: "FileText", module: "meetings" },
     { href: "/dashboard/reports", label: "Báo cáo tổng thể", icon: "BarChart3", module: "reports" },
     { href: "/dashboard/admin/users", label: "Quản lý người dùng", icon: "Users", module: "users" },
+    { href: "/dashboard/admin/audit", label: "Lịch sử truy vết", icon: "History", module: "users" },
   ],
   bgd: [
     { href: "/dashboard/weekly", label: "Bản tin tuần", icon: "Newspaper", module: "reports" },

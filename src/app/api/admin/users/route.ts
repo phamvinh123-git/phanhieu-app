@@ -6,6 +6,7 @@ import { hasAction } from "@/lib/permissions";
 import { hashPassword } from "@/lib/auth";
 import { ROLE_CODES, ROLE_SCOPE } from "@/lib/rbac-config";
 import { lockExpiredAccounts, parseExpiry } from "@/lib/role-expiry";
+import { audit } from "@/lib/audit";
 
 export async function GET() {
   const session = await requireSession();
@@ -77,6 +78,12 @@ export async function POST(req: NextRequest) {
     }))
   );
 
+  await audit(
+    session,
+    "user.create",
+    `Tạo tài khoản ${user.fullName} (${user.email}) — vai trò: ${roleAssignments.map((r: { role: string }) => r.role).join(", ")}`,
+    { entityId: user.id, meta: { roles: roleAssignments } }
+  );
   const { passwordHash: _omit, ...safeUser } = user;
   return NextResponse.json({ user: safeUser }, { status: 201 });
 }

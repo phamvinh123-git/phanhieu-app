@@ -6,6 +6,7 @@ import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction, resolveScope } from "@/lib/permissions";
 import type { ModuleCode } from "@/lib/rbac-config";
 import { notifyAssigned } from "@/lib/notifications";
+import { audit } from "@/lib/audit";
 
 const LEVEL_MODULE: Record<string, ModuleCode> = {
   branch: "branch_tasks",
@@ -123,6 +124,11 @@ export async function POST(req: NextRequest) {
     });
 
     await notifyAssigned([result.id], session);
+    const deptCodes = (await db.select({ code: departments.code }).from(departments).where(inArray(departments.id, departmentIds))).map((d) => d.code);
+    await audit(session, "task.create", `Tạo công việc "${result.title}" giao cho ${deptCodes.join(", ")}`, {
+      entityId: result.id,
+      meta: { departments: deptCodes, dueDate: result.dueDate },
+    });
     const [withDepts] = await attachDepartments([result]);
     return NextResponse.json({ task: withDepts }, { status: 201 });
   }
@@ -136,5 +142,6 @@ export async function POST(req: NextRequest) {
 
   const [row] = await db.insert(tasks).values({ ...common, departmentId }).returning();
   await notifyAssigned([row.id], session);
+  await audit(session, "task.create", `Tạo công việc cấp Phòng "${row.title}"`, { entityId: row.id });
   return NextResponse.json({ task: row }, { status: 201 });
 }

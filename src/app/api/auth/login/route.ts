@@ -5,6 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { lockExpiredAccounts, roleIsActive } from "@/lib/role-expiry";
 import { createSessionToken, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { jsonError } from "@/lib/api-helpers";
+import { audit } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
@@ -14,10 +15,20 @@ export async function POST(req: NextRequest) {
 
   // So khớp email không phân biệt hoa/thường (dữ liệu cũ có thể lưu "Admin@…").
   const [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email}`);
-  if (!user) return jsonError("Sai email hoặc mật khẩu", 401);
+  if (!user) {
+    await audit(null, "auth.login_failed", `Đăng nhập thất bại: email không tồn tại (${email.slice(0, 120)})`, {
+      actorName: email.slice(0, 120),
+    });
+    return jsonError("Sai email hoặc mật khẩu", 401);
+  }
 
   const ok = await verifyPassword(password, user.passwordHash);
-  if (!ok) return jsonError("Sai email hoặc mật khẩu", 401);
+  if (!ok) {
+    await audit({ userId: user.id, fullName: user.fullName }, "auth.login_failed", "Đăng nhập thất bại: sai mật khẩu", {
+      entityId: user.id,
+    });
+    return jsonError("Sai email hoặc mật khẩu", 401);
+  }
 
   // Chỉ báo lý do khoá khi đã nhập đúng mật khẩu (không lộ thông tin cho người lạ).
   const roles = await db.select().from(userRoles).where(and(eq(userRoles.userId, user.id), roleIsActive()));
@@ -25,6 +36,9 @@ export async function POST(req: NextRequest) {
   if (!user.isActive || roles.length === 0) {
     const allRoles = await db.select().from(userRoles).where(eq(userRoles.userId, user.id));
     const expired = allRoles.length > 0 && roles.length === 0;
+    await audit({ userId: user.id, fullName: user.fullName }, "auth.login_failed", "Đăng nhập bị từ chối: tài khoản đang tạm khoá / hết quyền", {
+      entityId: user.id,
+    });
     return jsonError(
       expired
         ? "Thời hạn giữ quyền đã kết thúc, tài khoản đã được tạm khoá. Liên hệ quản trị viên."
@@ -45,6 +59,7 @@ export async function POST(req: NextRequest) {
     })),
   });
   await setSessionCookie(token);
+  await audit({ userId: user.id, fullName: user.fullName }, "auth.login", "Đăng nhập thành công", { entityId: user.id });
 
   return NextResponse.json({ ok: true });
 }

@@ -10,6 +10,7 @@ import {
   uuid,
   index,
   uniqueIndex,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -213,6 +214,33 @@ export const notifications = pgTable(
   (t) => [
     uniqueIndex("notifications_user_dedupe_idx").on(t.userId, t.dedupeKey),
     index("notifications_user_created_idx").on(t.userId, t.createdAt),
+  ]
+);
+
+// ---------------------------------------------------------------------------
+// Lịch sử truy vết (audit log) — ai làm gì, lúc nào, từ đâu. Chỉ admin xem.
+// Lưu cả tên người thao tác tại thời điểm đó để vẫn đọc được nếu tài khoản bị xoá.
+// ---------------------------------------------------------------------------
+
+export const auditLogs = pgTable(
+  "audit_logs",
+  {
+    id: serial("id").primaryKey(),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    actorName: text("actor_name"),
+    action: varchar("action", { length: 48 }).notNull(),
+    entityType: varchar("entity_type", { length: 24 }),
+    entityId: varchar("entity_id", { length: 64 }),
+    summary: text("summary").notNull(),
+    meta: jsonb("meta"),
+    ip: varchar("ip", { length: 64 }),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    index("audit_logs_created_idx").on(t.createdAt),
+    index("audit_logs_actor_idx").on(t.actorId, t.createdAt),
+    index("audit_logs_entity_idx").on(t.entityType, t.entityId),
   ]
 );
 
