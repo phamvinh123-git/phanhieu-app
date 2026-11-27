@@ -17,6 +17,7 @@ export async function GET() {
     label: ROLE_LABELS[r.role],
     departmentId: r.departmentId,
     departmentName: r.departmentId ? depts.find((d) => d.id === r.departmentId)?.name ?? null : null,
+    departmentCode: r.departmentId ? depts.find((d) => d.id === r.departmentId)?.code ?? null : null,
   }));
 
   // Gộp (union) menu của tất cả vai trò, không lặp lại route trùng nhau.

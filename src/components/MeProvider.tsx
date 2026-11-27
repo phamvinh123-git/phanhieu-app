@@ -8,6 +8,7 @@ export type MeRole = {
   label: string;
   departmentId: number | null;
   departmentName: string | null;
+  departmentCode: string | null;
 };
 
 export type MeNavItem = { href: string; label: string; icon: string; module: string };

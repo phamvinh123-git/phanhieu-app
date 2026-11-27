@@ -78,6 +78,9 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   const roleText = me?.roles
+    .map((r) => (r.departmentCode ? `${r.label} · ${r.departmentCode}` : r.label))
+    .join(", ");
+  const roleFull = me?.roles
     .map((r) => (r.departmentName ? `${r.label} · ${r.departmentName}` : r.label))
     .join(", ");
 
@@ -114,8 +117,10 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
             {initials(me?.user?.fullName)}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">{me?.user?.fullName ?? "..."}</p>
-            <p className="truncate text-xs text-white/70" title={roleText}>
+            <p className="line-clamp-2 text-sm font-semibold leading-snug text-white" title={me?.user?.fullName}>
+              {me?.user?.fullName ?? "..."}
+            </p>
+            <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-white/70" title={roleFull}>
               {roleText || " "}
             </p>
           </div>
@@ -227,9 +232,9 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
                 <p className="truncate text-xs text-muted">{me?.user?.email}</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {me?.roles.map((r, i) => (
-                    <span key={i} className="badge badge-brand">
+                    <span key={i} className="badge badge-brand max-w-full" title={r.departmentName ?? undefined}>
                       {r.label}
-                      {r.departmentName && <span className="opacity-70">· {r.departmentName}</span>}
+                      {r.departmentCode && <span className="opacity-70">· {r.departmentCode}</span>}
                     </span>
                   ))}
                 </div>
