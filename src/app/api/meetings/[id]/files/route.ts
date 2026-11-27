@@ -5,6 +5,7 @@ import { meetingFiles, meetings, users } from "@/db/schema";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { deleteMeetingFile, saveMeetingFile } from "@/lib/meeting-files";
+import { canViewMeeting } from "@/lib/meeting-scope";
 
 /** Danh sách file biên bản gốc của một cuộc họp. */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -12,6 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!isSession(session)) return session;
   if (!hasAction(session, "meetings", "view")) return jsonError("Không có quyền", 403);
   const { id } = await params;
+  if (!(await canViewMeeting(session, Number(id)))) return jsonError("Không có quyền", 403);
 
   const rows = await db
     .select({

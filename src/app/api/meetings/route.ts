@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { meetings } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { desc, inArray, sql } from "drizzle-orm";
+import { visibleMeetingIds } from "@/lib/meeting-scope";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 
@@ -10,6 +11,8 @@ export async function GET() {
   if (!isSession(session)) return session;
   if (!hasAction(session, "meetings", "view")) return jsonError("Không có quyền", 403);
 
+  const visible = await visibleMeetingIds(session);
+  if (visible !== null && visible.length === 0) return NextResponse.json({ meetings: [] });
   const rows = await db
     .select({
       id: meetings.id,
@@ -22,6 +25,7 @@ export async function GET() {
       fileCount: sql<number>`(select count(*)::int from "meeting_files" mf where mf."meeting_id" = "meetings"."id")`,
     })
     .from(meetings)
+    .where(visible === null ? undefined : inArray(meetings.id, visible))
     .orderBy(desc(meetings.meetingDate));
   return NextResponse.json({ meetings: rows });
 }

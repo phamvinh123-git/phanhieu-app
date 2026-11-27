@@ -85,7 +85,8 @@ export const PERMISSION_MATRIX: Record<RoleCode, Record<ModuleCode, Action[]>> =
   },
   truong_phong: {
     users: [],
-    meetings: [],
+    // Chỉ xem biên bản (và file gốc) của các cuộc họp có giao việc cho Phòng mình
+    meetings: ["view"],
     branch_tasks: ["view", "update_status", "comment"],
     department_tasks: ["create", "view", "assign", "update_status", "comment"],
     reports: ["view"],
@@ -127,6 +128,7 @@ export const ROLE_NAV_ITEMS: Record<RoleCode, NavItem[]> = {
   ],
   truong_phong: [
     { href: "/dashboard/branch-tasks", label: "Nhiệm vụ Phân Hiệu giao", icon: "Building2", module: "branch_tasks" },
+    { href: "/dashboard/meetings", label: "Biên bản họp", icon: "FileText", module: "meetings" },
     ...(DEPARTMENT_KANBAN_ENABLED
       ? [{ href: "/dashboard/department-tasks", label: "Kanban cấp Phòng", icon: "KanbanSquare", module: "department_tasks" as const }]
       : []),

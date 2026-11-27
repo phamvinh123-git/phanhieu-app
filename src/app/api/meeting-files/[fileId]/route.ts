@@ -5,6 +5,7 @@ import { meetingFiles } from "@/db/schema";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { deleteMeetingFile, readMeetingFile } from "@/lib/meeting-files";
+import { canViewMeeting } from "@/lib/meeting-scope";
 
 /** Xem (?download=1 để tải về) một file biên bản gốc. */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
 
   const [f] = await db.select().from(meetingFiles).where(eq(meetingFiles.id, Number(fileId)));
   if (!f) return jsonError("Không tìm thấy file", 404);
+  if (!(await canViewMeeting(session, f.meetingId))) return jsonError("Không có quyền", 403);
   let data: Buffer;
   try {
     data = await readMeetingFile(f.storedName);

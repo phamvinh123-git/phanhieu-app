@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, X, Clock, MessageSquare, Building2, Check, Inbox, Search, CalendarDays, FileText, Flag, Layers, Send, SlidersHorizontal } from "lucide-react";
 import { useMe } from "./MeProvider";
+import { MeetingFiles } from "./MeetingFiles";
 import { ModalShell } from "./ModalShell";
 import { can, type ModuleCode, type RoleCode } from "@/lib/rbac-config";
 import { PageHeader, StatusBadge, STATUS_META, PRIORITY_META, isOverdue, formatDate } from "./ui";
@@ -779,6 +780,8 @@ function TaskDetailDrawer({
               )}
             </dl>
           </section>
+
+          {task.meetingId && <MeetingFiles meetingId={task.meetingId} canEdit={false} />}
 
           {task.description && (
             <section>

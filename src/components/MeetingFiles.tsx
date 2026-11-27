@@ -71,6 +71,9 @@ export function MeetingFiles({ meetingId, canEdit, onChanged }: { meetingId: num
     onChanged?.();
   }
 
+  // Chỉ xem (vd. trong ngăn chi tiết nhiệm vụ): không có file thì ẩn hẳn mục này
+  if (!canEdit && files !== null && files.length === 0) return null;
+
   return (
     <section className="mb-5">
       <div className="mb-2 flex items-center justify-between gap-3">
