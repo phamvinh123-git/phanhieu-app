@@ -108,6 +108,8 @@ export function KanbanBoard({
   const moduleCode = MODULE_BY_LEVEL[level];
   const myRoleCodes = useMemo(() => (me?.roles.map((r) => r.role) ?? []) as RoleCode[], [me]);
   const canCreate = myRoleCodes.some((r) => can(r, moduleCode, "create"));
+  // Người chỉ có quyền xem (Quản trị, Ban Giám đốc) không đổi trạng thái được
+  const canMove = myRoleCodes.some((r) => can(r, moduleCode, "update_status") || can(r, moduleCode, "create"));
 
   const loadTasks = useCallback(() => {
     setLoading(true);
@@ -401,7 +403,7 @@ export function KanbanBoard({
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.97 }}
                           transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                          draggable
+                          draggable={canMove}
                           onDragStart={() => setDragId(t.id)}
                           onClick={() => setActiveTask(t)}
                           onKeyDown={(e) => {
@@ -418,6 +420,7 @@ export function KanbanBoard({
                           }`}
                         >
                           <div className="flex items-start gap-2.5">
+                            {canMove && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -432,6 +435,7 @@ export function KanbanBoard({
                             >
                               {t.status === "done" && <Check className="h-3 w-3 animate-check-pop" strokeWidth={3} />}
                             </button>
+                            )}
                             <div className="min-w-0 flex-1">
                               <p
                                 className={`text-[15px] font-semibold leading-snug ${
@@ -503,7 +507,7 @@ export function KanbanBoard({
             task={tasks.find((t) => t.id === shownTask.id) ?? shownTask}
             deptName={deptName}
             onClose={closeTask}
-            onChangeStatus={(status) => updateStatus(shownTask.id, status)}
+            onChangeStatus={canMove ? (status) => updateStatus(shownTask.id, status) : undefined}
           />
         )}
       </AnimatePresence>
@@ -655,7 +659,7 @@ function TaskDetailDrawer({
   task: Task;
   deptName: (id: number | null) => string;
   onClose: () => void;
-  onChangeStatus: (status: Task["status"]) => void;
+  onChangeStatus?: (status: Task["status"]) => void;
 }) {
   const [comments, setComments] = useState<{ id: number; content: string; userName: string | null; createdAt: string }[]>([]);
   const [content, setContent] = useState("");
@@ -729,6 +733,7 @@ function TaskDetailDrawer({
 
         <div className="thin-scrollbar flex-1 space-y-6 overflow-y-auto px-5 py-5">
           {/* Cập nhật trạng thái — phương án thay cho kéo thả trên thiết bị cảm ứng */}
+          {onChangeStatus && (
           <section>
             <h3 className="mb-2 text-[13px] font-semibold text-muted">Cập nhật trạng thái</h3>
             <div className="grid grid-cols-3 gap-2">
@@ -738,7 +743,7 @@ function TaskDetailDrawer({
                   <button
                     key={c.key}
                     type="button"
-                    onClick={() => !active && onChangeStatus(c.key)}
+                    onClick={() => !active && onChangeStatus?.(c.key)}
                     aria-pressed={active}
                     className={`flex h-10 items-center justify-center gap-1.5 rounded-lg border px-2 text-[13px] font-medium transition-colors ${
                       active ? "text-white" : "border-line bg-white text-ink hover:bg-slate-50"
@@ -752,6 +757,7 @@ function TaskDetailDrawer({
               })}
             </div>
           </section>
+          )}
 
           <section>
             <h3 className="mb-2 text-[13px] font-semibold text-muted">Thông tin</h3>

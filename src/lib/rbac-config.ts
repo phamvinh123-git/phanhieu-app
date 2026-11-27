@@ -114,8 +114,10 @@ export const DEPARTMENT_KANBAN_ENABLED = false;
 export const ROLE_NAV_ITEMS: Record<RoleCode, NavItem[]> = {
   admin: [
     { href: "/dashboard/weekly", label: "Bản tin tuần", icon: "Newspaper", module: "reports" },
-    { href: "/dashboard/admin/users", label: "Quản lý người dùng", icon: "Users", module: "users" },
+    { href: "/dashboard/branch-tasks", label: "Tiến độ Phân Hiệu", icon: "Building2", module: "branch_tasks" },
+    { href: "/dashboard/meetings", label: "Biên bản họp", icon: "FileText", module: "meetings" },
     { href: "/dashboard/reports", label: "Báo cáo tổng thể", icon: "BarChart3", module: "reports" },
+    { href: "/dashboard/admin/users", label: "Quản lý người dùng", icon: "Users", module: "users" },
   ],
   bgd: [
     { href: "/dashboard/weekly", label: "Bản tin tuần", icon: "Newspaper", module: "reports" },
