@@ -24,6 +24,7 @@ import {
 import { useMe } from "../MeProvider";
 import { SplashScreen } from "../SplashScreen";
 import { NotificationBell } from "./NotificationBell";
+import { IdleScreen } from "../IdleScreen";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -284,6 +285,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
+      <IdleScreen />
       <AnimatePresence>
         {showSplash && (
           <motion.div key="splash" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
