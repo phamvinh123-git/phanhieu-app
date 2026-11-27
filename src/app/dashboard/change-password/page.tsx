@@ -52,11 +52,11 @@ export default function ChangePasswordPage() {
   const inputCls = "field";
 
   return (
-    <div className="max-w-md">
+    <div className="mx-auto w-full max-w-md pt-4 sm:pt-8">
       <motion.h1
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 text-2xl font-bold text-ink"
+        className="flex items-center justify-center gap-3 text-2xl font-bold text-ink"
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-600">
           <KeyRound className="h-4.5 w-4.5" />

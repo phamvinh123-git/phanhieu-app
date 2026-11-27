@@ -1,6 +1,9 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users, userRoles } from "@/db/schema";
 import type { RoleCode } from "./rbac-config";
 
 const SESSION_COOKIE = "phanhieu_session";
@@ -58,7 +61,21 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
-    return payload as unknown as SessionPayload;
+    const session = payload as unknown as SessionPayload;
+    // Đọc lại trạng thái + vai trò mới nhất: tài khoản bị tạm khoá hoặc bị gỡ
+    // hết vai trò (thôi kiêm nhiệm) mất quyền truy cập NGAY, không phải chờ
+    // phiên đăng nhập (7 ngày) hết hạn; đổi vai trò cũng có hiệu lực ngay.
+    const [user] = await db
+      .select({ isActive: users.isActive, fullName: users.fullName, email: users.email })
+      .from(users)
+      .where(eq(users.id, session.userId));
+    if (!user || !user.isActive) return null;
+    const roles = await db
+      .select({ role: userRoles.role, departmentId: userRoles.departmentId })
+      .from(userRoles)
+      .where(eq(userRoles.userId, session.userId));
+    if (roles.length === 0) return null;
+    return { userId: session.userId, fullName: user.fullName, email: user.email, roles };
   } catch {
     return null;
   }

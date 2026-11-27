@@ -21,6 +21,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!target) return jsonError("Không tìm thấy tài khoản", 404);
 
   const body = await req.json().catch(() => null);
+  if (body?.isActive === false && id === session.userId) {
+    return jsonError("Không thể tự tạm khoá tài khoản của chính mình");
+  }
   const roleAssignments = Array.isArray(body?.roles) ? body.roles : null;
 
   if (roleAssignments) {

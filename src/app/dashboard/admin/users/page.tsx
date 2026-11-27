@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, X, Trash2, Pencil, Search, Users as UsersIcon } from "lucide-react";
+import { Plus, X, Trash2, Pencil, Search, Lock, LockOpen, Users as UsersIcon } from "lucide-react";
+import { useMe } from "@/components/MeProvider";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { initials } from "@/components/layout/AppShell";
 import { ModalShell } from "@/components/ModalShell";
@@ -29,6 +30,10 @@ export default function AdminUsersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | "active" | "locked">("");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const { me } = useMe();
 
   function load() {
     setLoading(true);
@@ -49,8 +54,35 @@ export default function AdminUsersPage() {
 
   const q = query.trim().toLowerCase();
   const visible = users.filter(
-    (u) => !q || u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    (u) =>
+      (!q || u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)) &&
+      (!statusFilter || (statusFilter === "active" ? u.isActive : !u.isActive))
   );
+  const activeCount = users.filter((u) => u.isActive).length;
+
+  async function toggleActive(u: UserRow) {
+    const next = !u.isActive;
+    const ok = window.confirm(
+      next
+        ? `Mở khoá tài khoản ${u.fullName}? Người này sẽ đăng nhập và làm việc lại được.`
+        : `Tạm khoá tài khoản ${u.fullName}? Người này sẽ bị đăng xuất và không đăng nhập được cho đến khi được mở khoá. Dữ liệu công việc vẫn được giữ nguyên.`
+    );
+    if (!ok) return;
+    setTogglingId(u.id);
+    setActionError(null);
+    const res = await fetch(`/api/admin/users/${u.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isActive: next }),
+    });
+    setTogglingId(null);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setActionError(data.error ?? "Không thể cập nhật trạng thái");
+      return;
+    }
+    setUsers((list) => list.map((x) => (x.id === u.id ? { ...x, isActive: next } : x)));
+  }
 
   return (
     <div>
@@ -76,12 +108,30 @@ export default function AdminUsersPage() {
               className="field pl-9"
             />
           </div>
+          <div className="w-full sm:w-52">
+            <label htmlFor="user-status" className="sr-only">Lọc theo trạng thái</label>
+            <select
+              id="user-status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "" | "active" | "locked")}
+              className="field"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="locked">Tạm khoá</option>
+            </select>
+          </div>
           {!loading && (
             <span className="text-[13px] tabular-nums text-muted">
-              {visible.length}/{users.length} tài khoản
+              {activeCount} đang hoạt động · {users.length - activeCount} tạm khoá
             </span>
           )}
         </div>
+        {actionError && (
+          <div role="alert" className="border-b border-line bg-[#FEF2F2] px-4 py-2 text-sm text-[#B91C1C]">
+            {actionError}
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-2 p-4">
@@ -110,7 +160,7 @@ export default function AdminUsersPage() {
                 {visible.map((u) => {
                   const units = [...new Set(u.roles.map((r) => deptName(r.departmentId)).filter(Boolean))];
                   return (
-                    <tr key={u.id}>
+                    <tr key={u.id} className={u.isActive ? "" : "[&>td:not(:last-child)]:opacity-50"}>
                       <td>
                         <div className="flex items-center gap-3">
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-sm font-semibold text-red-700">
@@ -133,14 +183,34 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
                       <td>
-                        <span className={`badge ${u.isActive ? "badge-done" : "badge-neutral"}`}>
-                          {u.isActive ? "Đang hoạt động" : "Đã khoá"}
+                        <span className={`badge ${u.isActive ? "badge-done" : "badge-overdue"}`}>
+                          {u.isActive ? "Đang hoạt động" : "Tạm khoá"}
                         </span>
                       </td>
                       <td className="text-right">
-                        <button onClick={() => setEditingUser(u)} className="btn btn-soft btn-sm">
-                          <Pencil className="h-3.5 w-3.5" /> Sửa phân quyền
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => setEditingUser(u)} className="btn btn-soft btn-sm">
+                            <Pencil className="h-3.5 w-3.5" /> Sửa phân quyền
+                          </button>
+                          {u.id !== me?.user?.id &&
+                            (u.isActive ? (
+                              <button
+                                onClick={() => toggleActive(u)}
+                                disabled={togglingId === u.id}
+                                className="btn btn-danger btn-sm w-[104px]"
+                              >
+                                <Lock className="h-3.5 w-3.5" /> Tạm khoá
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => toggleActive(u)}
+                                disabled={togglingId === u.id}
+                                className="btn btn-secondary btn-sm w-[104px]"
+                              >
+                                <LockOpen className="h-3.5 w-3.5" /> Mở khoá
+                              </button>
+                            ))}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -431,7 +501,7 @@ function EditUserModal({
       <form onSubmit={submit} className="space-y-3">
         <label className="flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="h-4 w-4" />
-          Tài khoản đang hoạt động (bỏ chọn để khoá đăng nhập)
+          Tài khoản đang hoạt động (bỏ chọn để tạm khoá)
         </label>
 
         <RoleRowsEditor roleRows={roleRows} setRoleRows={setRoleRows} departments={departments} />
