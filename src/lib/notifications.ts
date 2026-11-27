@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNotNull, lte, ne, notInArray, or, sql } from 
 import { db } from "@/db";
 import { notifications, taskDepartments, tasks, userRoles, users } from "@/db/schema";
 import type { SessionPayload } from "./auth";
+import { DEPARTMENT_KANBAN_ENABLED } from "./rbac-config";
 
 /**
  * Thông báo trong app. Người nhận một thông báo về nhiệm vụ là: mọi tài khoản
@@ -120,13 +121,21 @@ export async function ensureDueReminders(session: SessionPayload) {
     : [];
 
   const scope = [eq(tasks.createdBy, session.userId)];
-  if (deptIds.length) scope.push(and(eq(tasks.level, "department"), inArray(tasks.departmentId, deptIds))!);
+  if (deptIds.length && DEPARTMENT_KANBAN_ENABLED) scope.push(and(eq(tasks.level, "department"), inArray(tasks.departmentId, deptIds))!);
   if (branchIds.length) scope.push(inArray(tasks.id, branchIds));
 
   const due = await db
     .select({ id: tasks.id, dueDate: tasks.dueDate })
     .from(tasks)
-    .where(and(ne(tasks.status, "done"), isNotNull(tasks.dueDate), lte(tasks.dueDate, limit), or(...scope)));
+    .where(
+      and(
+        ne(tasks.status, "done"),
+        isNotNull(tasks.dueDate),
+        lte(tasks.dueDate, limit),
+        or(...scope),
+        DEPARTMENT_KANBAN_ENABLED ? undefined : eq(tasks.level, "branch")
+      )
+    );
 
   for (const t of due) {
     const dueYmd = t.dueDate!.toISOString().slice(0, 10);
@@ -187,14 +196,26 @@ export async function listNotifications(session: SessionPayload, limit = 40) {
     })
     .from(notifications)
     .leftJoin(tasks, eq(tasks.id, notifications.taskId))
-    .where(eq(notifications.userId, session.userId))
+    .where(
+      and(
+        eq(notifications.userId, session.userId),
+        DEPARTMENT_KANBAN_ENABLED ? undefined : sql`(${tasks.level} is null or ${tasks.level} = 'branch')`
+      )
+    )
     .orderBy(desc(notifications.createdAt))
     .limit(limit);
 
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(notifications)
-    .where(and(eq(notifications.userId, session.userId), sql`${notifications.readAt} is null`));
+    .leftJoin(tasks, eq(tasks.id, notifications.taskId))
+    .where(
+      and(
+        eq(notifications.userId, session.userId),
+        sql`${notifications.readAt} is null`,
+        DEPARTMENT_KANBAN_ENABLED ? undefined : sql`(${tasks.level} is null or ${tasks.level} = 'branch')`
+      )
+    );
 
   return {
     unread: count,

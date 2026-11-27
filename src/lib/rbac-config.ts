@@ -98,6 +98,11 @@ export type NavItem = {
   module: ModuleCode;
 };
 
+/** Kanban cấp Phòng (Trưởng phòng tự chia việc) — CHƯA triển khai: tắt thì ẩn
+ *  khỏi menu, Tổng quan, Báo cáo, thông báo; trang chuyển về Nhiệm vụ Phân hiệu.
+ *  Bật lại bằng cách đổi thành true. */
+export const DEPARTMENT_KANBAN_ENABLED = false;
+
 export const ROLE_NAV_ITEMS: Record<RoleCode, NavItem[]> = {
   admin: [
     { href: "/dashboard/admin/users", label: "Quản lý người dùng", icon: "Users", module: "users" },
@@ -115,7 +120,9 @@ export const ROLE_NAV_ITEMS: Record<RoleCode, NavItem[]> = {
   ],
   truong_phong: [
     { href: "/dashboard/branch-tasks", label: "Nhiệm vụ Phân Hiệu giao", icon: "Building2", module: "branch_tasks" },
-    { href: "/dashboard/department-tasks", label: "Kanban cấp Phòng", icon: "KanbanSquare", module: "department_tasks" },
+    ...(DEPARTMENT_KANBAN_ENABLED
+      ? [{ href: "/dashboard/department-tasks", label: "Kanban cấp Phòng", icon: "KanbanSquare", module: "department_tasks" as const }]
+      : []),
     { href: "/dashboard/reports", label: "Báo cáo & thống kê", icon: "BarChart3", module: "reports" },
   ],
 };

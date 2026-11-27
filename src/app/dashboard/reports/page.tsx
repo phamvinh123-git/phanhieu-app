@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, CheckCircle2, Loader, AlertTriangle, X, BarChart3 } from "lucide-react";
+import { DEPARTMENT_KANBAN_ENABLED } from "@/lib/rbac-config";
 import { PageHeader, KpiCard, EmptyState, STATUS_META, isOverdue, formatDate, type TaskStatus } from "@/components/ui";
 
 type Level = "branch" | "department";
@@ -45,7 +46,9 @@ export default function ReportsPage() {
       fetch("/api/reports/summary").then((r) => r.json()),
       fetch("/api/org").then((r) => r.json()),
     ]).then(async ([s, o]) => {
-      const allowed = Object.keys(s.summary ?? {}).filter((k): k is Level => k === "branch" || k === "department");
+      const allowed = Object.keys(s.summary ?? {}).filter(
+        (k): k is Level => k === "branch" || (DEPARTMENT_KANBAN_ENABLED && k === "department")
+      );
       setLevels(allowed);
       setDepts(o.departments ?? []);
       const lists = await Promise.all(

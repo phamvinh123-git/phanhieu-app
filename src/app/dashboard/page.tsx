@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ClipboardList, Loader, CalendarClock, CheckCircle2, Plus, ArrowRight, AlertTriangle, Inbox } from "lucide-react";
 import { useMe } from "@/components/MeProvider";
-import { can, type RoleCode } from "@/lib/rbac-config";
+import { can, DEPARTMENT_KANBAN_ENABLED, type RoleCode } from "@/lib/rbac-config";
 import {
   PageHeader,
   KpiCard,
@@ -45,7 +45,7 @@ export default function DashboardHome() {
     const mods = new Set(me?.nav.map((n) => n.module));
     const out: Level[] = [];
     if (mods.has("branch_tasks") || mods.has("reports")) out.push("branch");
-    if (mods.has("department_tasks") || mods.has("reports")) out.push("department");
+    if (DEPARTMENT_KANBAN_ENABLED && (mods.has("department_tasks") || mods.has("reports"))) out.push("department");
     return out;
   }, [me]);
 
@@ -75,7 +75,7 @@ export default function DashboardHome() {
   const roleCodes = (me?.roles.map((r) => r.role) ?? []) as RoleCode[];
   const createHref = roleCodes.some((r) => can(r, "branch_tasks", "create"))
     ? LEVEL_PAGE.branch
-    : roleCodes.some((r) => can(r, "department_tasks", "create"))
+    : DEPARTMENT_KANBAN_ENABLED && roleCodes.some((r) => can(r, "department_tasks", "create"))
       ? LEVEL_PAGE.department
       : null;
 
