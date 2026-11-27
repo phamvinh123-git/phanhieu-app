@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* =============================================================================
-   HMU TaskFlow — Design tokens (theo tài liệu đặc tả UI/UX)
+   Design tokens (theo tài liệu đặc tả UI/UX)
    ============================================================================= */
 :root {
   --brand: #b51f2e;

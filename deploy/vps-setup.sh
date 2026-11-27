@@ -191,11 +191,12 @@ CRON
 chmod 644 /etc/cron.d/phanhieu-due-date-reminders
 
 # ------------------------------------------------------------- 7. Kiểm tra
-# Phải là CHÍNH app này trả lời (trang đăng nhập có chữ TaskFlow) và PM2 báo online.
+# Phải là CHÍNH app này trả lời (thẻ <meta name="application-name" content="phanhieu-app">)
+# và cổng do chính thư mục app giữ.
 echo -n ">> Chờ app khởi động"
 OK=0
 for _ in $(seq 1 40); do
-  if curl -fsS "http://127.0.0.1:${APP_PORT}/login" 2>/dev/null | grep -qi "taskflow" &&
+  if curl -fsS "http://127.0.0.1:${APP_PORT}/login" 2>/dev/null | grep -q 'content="phanhieu-app"' &&
      [ "$(port_owner_cwd "$APP_PORT")" = "$APP_DIR" ]; then OK=1; echo " OK"; break; fi
   echo -n "."; sleep 2
 done

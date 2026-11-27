@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Thành phần giao diện dùng chung theo đặc tả HMU TaskFlow:
+ * Thành phần giao diện dùng chung theo tài liệu đặc tả giao diện:
  * tiêu đề trang, thẻ KPI, badge trạng thái, trạng thái rỗng.
  */
 

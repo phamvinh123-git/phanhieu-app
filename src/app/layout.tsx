@@ -10,6 +10,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Hệ thống Quản lý & Phân công công việc — Phân Hiệu Y Hà Nội tại Thanh Hóa",
   description: "Phân bổ, theo dõi và báo cáo tiến độ công việc theo mô hình Kanban",
+  // Dấu nhận diện cố định — script deploy dùng để chắc chắn đúng app này đang trả lời.
+  applicationName: "phanhieu-app",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

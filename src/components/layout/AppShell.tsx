@@ -53,14 +53,14 @@ function isActive(pathname: string, href: string) {
 
 function Brand() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-3 px-5 py-5">
+    <Link href="/dashboard" className="flex items-center gap-3 px-4 py-5">
       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white p-1 shadow-sm">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-phan-hieu.png" alt="Logo Phân hiệu Thanh Hoá" className="h-full w-full object-contain" />
       </span>
       <span className="min-w-0 leading-tight">
-        <span className="block text-[15px] font-bold tracking-wide text-white">HMU TaskFlow</span>
-        <span className="block text-xs text-white/75">Phân hiệu ĐH Y Hà Nội tại Thanh Hoá</span>
+        <span className="block whitespace-nowrap text-[14px] font-bold text-white">Phân hiệu Thanh Hoá</span>
+        <span className="block text-xs text-white/75">Trường Đại học Y Hà Nội</span>
       </span>
     </Link>
   );
@@ -338,7 +338,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="animate-fade-in-up">{children}</div>
         </main>
         <footer className="px-6 pb-5 text-center text-xs text-muted">
-          © {new Date().getFullYear()} Phân hiệu Trường Đại học Y Hà Nội tại Thanh Hoá · HMU TaskFlow
+          © {new Date().getFullYear()} Phân hiệu Trường Đại học Y Hà Nội tại Thanh Hoá
         </footer>
       </div>
     </div>

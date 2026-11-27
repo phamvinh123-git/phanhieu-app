@@ -57,8 +57,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative">
-          <p className="text-sm font-semibold tracking-wide text-white/70">HMU TASKFLOW</p>
-          <h1 className="mt-2 text-[32px] font-bold leading-tight">
+          <h1 className=" text-[32px] font-bold leading-tight">
             Hệ thống quản lý và
             <br />
             phân công công việc

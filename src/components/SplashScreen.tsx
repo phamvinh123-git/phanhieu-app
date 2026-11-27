@@ -19,8 +19,8 @@ export function SplashScreen() {
           <img src="/logo-phan-hieu.png" alt="" className="h-full w-full object-contain" />
         </span>
       </div>
-      <p className="mt-6 text-lg font-bold tracking-wide text-red-700">HMU TaskFlow</p>
-      <p className="mt-0.5 text-[13px] text-muted">Phân hiệu Trường Đại học Y Hà Nội tại Thanh Hoá</p>
+      <p className="mt-6 text-lg font-bold text-red-700">Phân hiệu Trường Đại học Y Hà Nội tại Thanh Hoá</p>
+      <p className="mt-0.5 text-[13px] text-muted">Hệ thống quản lý và phân công công việc</p>
       <div className="mt-6 h-1 w-40 overflow-hidden rounded-full bg-red-100">
         <div className="splash-bar h-full w-1/3 rounded-full bg-red-600" />
       </div>
