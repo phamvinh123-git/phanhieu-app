@@ -71,7 +71,7 @@ Một nhiệm vụ cấp Phân hiệu có thể gắn với **nhiều Phòng** c
 ## Bảng phân quyền (RBAC)
 
 Nguồn duy nhất của toàn bộ ma trận quyền nằm ở [`src/lib/rbac-config.ts`](src/lib/rbac-config.ts)
-— cả API (chặn ở server) và Sidebar (hiển thị menu) đều đọc từ đây nên không thể lệch nhau.
+— cả API (chặn ở server) và thanh menu (hiển thị menu) đều đọc từ đây nên không thể lệch nhau.
 
 | Vai trò | Biên bản họp | Nhiệm vụ cấp Phân hiệu | Nhiệm vụ cấp Phòng | Báo cáo & Thống kê | Người dùng |
 |---|---|---|---|---|---|
@@ -87,7 +87,7 @@ vừa kiêm phụ trách Phòng B. Admin có thể chỉnh sửa toàn bộ tổ
 
 ## UI/UX: gộp tính năng theo vai trò
 
-Sidebar bên trái (`src/components/Sidebar.tsx`) đọc `/api/me`, lấy **hợp (union)** danh sách
+Thanh menu ngang trên header đỏ (`src/components/AppHeader.tsx`, giao diện đồng bộ với hệ thống Giấy báo nộp tiền) đọc `/api/me`, lấy **hợp (union)** danh sách
 menu của tất cả vai trò/phạm vi người dùng đang giữ — nếu một người là Trưởng phòng của cả
 2 phòng, họ vẫn chỉ thấy một mục "Kanban cấp Phòng" nhưng dữ liệu bên trong gộp cả 2 phòng.
 
@@ -156,6 +156,25 @@ Mở http://localhost:3000, đăng nhập bằng email trong danh sách cán b�
 trong `credentials.generated.csv` (được sinh sau khi chạy `npm run db:seed`, không có sẵn
 mật khẩu cố định để tra cứu trong tài liệu này).
 
+## Deploy lên VPS bằng PM2 (không dùng Docker)
+
+Script `deploy/vps-setup.sh` cài và chạy toàn bộ trên một VPS Ubuntu/Debian: Node.js 22,
+PostgreSQL, PM2, tạo database `phanhieu`, sinh file `.env` (mật khẩu DB, `JWT_SECRET`...),
+build, tạo bảng, tạo dữ liệu ban đầu (8 phòng ban + 13 tài khoản), chạy app bằng PM2, tự
+khởi động lại khi VPS reboot, và đặt lịch nhắc hạn 08:00 mỗi ngày.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/phamvinh123-git/phanhieu-app/main/deploy/vps-setup.sh -o vps-setup.sh
+sudo bash vps-setup.sh
+```
+
+- Tuỳ chọn: `sudo APP_PORT=3005 BRANCH=main bash vps-setup.sh`.
+- Mọi tài khoản dùng chung mật khẩu ban đầu in ra cuối script (`SEED_DEFAULT_PASSWORD` trong
+  `/opt/phanhieu-app/.env`), mỗi người tự đổi sau lần đăng nhập đầu.
+- **Cập nhật code mới**: chạy lại `sudo bash /opt/phanhieu-app/deploy/vps-setup.sh` — dữ liệu
+  giữ nguyên, `.env` không bị ghi đè.
+- Log: `pm2 logs phanhieu-app` · Sao lưu: `sudo -u postgres pg_dump -Fc phanhieu > phanhieu.dump`.
+
 ## Deploy lên Render
 
 File `render.yaml` đã cấu hình sẵn: 1 Web Service (Node), 1 Postgres instance, và 1 Cron Job
@@ -200,7 +219,7 @@ src/
   app/login                       Trang đăng nhập (thiết kế theo tông đỏ-trắng của trường)
   components/KanbanBoard.tsx      Kanban dùng chung cho cả 2 cấp (branch/department), hỗ trợ
                                    hiển thị/chọn nhiều Phòng cho nhiệm vụ liên phòng
-  components/Sidebar.tsx          Menu gộp theo vai trò, hiển thị logo trường
+  components/AppHeader.tsx        Header đỏ + menu gộp theo vai trò, logo trường
 ```
 
 ## Giới hạn hiện tại / gợi ý mở rộng tiếp theo

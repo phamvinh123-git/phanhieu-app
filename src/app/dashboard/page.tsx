@@ -24,7 +24,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 const GREETING_GRADIENTS = [
-  "from-red-500 to-rose-600",
+  "from-red-700 via-red-600 to-red-800",
   "from-rose-500 to-orange-500",
   "from-red-600 to-red-800",
 ];
@@ -51,7 +51,7 @@ export default function DashboardHome() {
         <h1 className="relative mt-1 text-2xl font-semibold">{me?.user?.fullName ?? "..."}</h1>
         <p className="relative mt-2 max-w-xl text-sm text-red-50/90">
           Bạn đang có {me?.roles.length ?? 0} vai trò trong hệ thống. Các tính năng tương ứng đã được gộp
-          vào thanh menu bên trái.
+          vào thanh menu phía trên.
         </p>
       </motion.div>
 
