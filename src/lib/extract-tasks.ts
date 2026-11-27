@@ -631,15 +631,18 @@ export function extractTasksFromMinutes(
     }
 
     // ---- Tiêu đề: [chủ đề dòng "-"]: [chủ đề trong câu]: nội dung đã làm sạch --
-    const cleanedWork = cleanTitle(work, workMentions);
-    const prefixParts = [kind === "plus" ? topic : null, lead || null].filter((x): x is string => Boolean(x));
+    // Dòng đã ghi rõ mã Phòng trong ngoặc: người soạn đã tự chia việc → giữ
+    // nguyên câu chữ (chỉ bỏ số thứ tự + ngoặc mã), MỘT dòng = MỘT việc.
+    const explicit = tagDepts.length > 0;
+    const cleanedWork = explicit ? cleanTitle(body, []) : cleanTitle(work, workMentions);
+    const prefixParts = [kind === "plus" ? topic : null, explicit ? null : lead || null].filter((x): x is string => Boolean(x));
     const prefix = prefixParts.map((x, i) => (i === 0 ? x : lowerFirst(x))).join(": ");
     const titleSource = prefix ? `${prefix}: ${lowerFirst(cleanedWork)}` : cleanedWork;
     if (wordCount(titleSource) < 3) continue;
 
     // ---- Tách nhiều việc trên cùng một dòng (ngăn bởi ";") — chỉ ở biên bản
     // viết tự do; biên bản hành chính hay dùng ";" trong cùng một ý.
-    const parts = structured ? [] : cleanedWork.split(/\s*;\s*/).filter((p) => wordCount(p) >= 3);
+    const parts = structured || explicit ? [] : cleanedWork.split(/\s*;\s*/).filter((p) => wordCount(p) >= 3);
     const pieces = parts.length > 1 ? parts.map((p) => (prefix ? `${prefix}: ${p}` : p)) : [titleSource];
     const lineDeadline = pickDeadline(findDates(fold(line), ref));
 

@@ -220,3 +220,21 @@ test("biên bản theo mẫu hành chính: chỉ đọc phần NỘI DUNG, mục
     ["report", "report"]
   );
 });
+
+test("dòng có mã trong ngoặc: giữ nguyên câu, một dòng là một việc (không tách ';', không cắt 'Giao …')", () => {
+  const text = [
+    "1. Đẩy nhanh tiến độ cải tạo nhà A, đảm bảo an toàn thi công; tăng cường bạt chắn bụi (TCHCQT).",
+    "2. Rà soát kết quả KPI 6 tháng đầu năm; đơn vị chưa hoàn thành cần có phương án giải quyết (TCHCQT).",
+    "3. Tổ chức chuỗi sự kiện Ngày hội chào năm học mới ngày 26/09/2026; đề xuất Ban Giám Đốc lịch họp Ban Chỉ đạo (QLDT).",
+    "4. Giao Phòng Quản lý Đào tạo trao đổi với phụ huynh, sinh viên về nguyện vọng rút học phí (QLDT, TCKT).",
+    "5. Hoàn thiện cơ cấu nhân sự đáp ứng nhu cầu công việc (KTDBCL, TCHCQT).",
+  ].join("\n");
+  const { tasks } = run(text, { referenceDate: "2026-09-07" });
+  assert.equal(tasks.length, 5);
+  assert.equal(tasks[0].title, "Đẩy nhanh tiến độ cải tạo nhà A, đảm bảo an toàn thi công; tăng cường bạt chắn bụi");
+  assert.equal(tasks[1].title, "Rà soát kết quả KPI 6 tháng đầu năm; đơn vị chưa hoàn thành cần có phương án giải quyết");
+  assert.equal(tasks[2].dueDate, "2026-09-26");
+  assert.equal(tasks[3].title, "Giao Phòng Quản lý Đào tạo trao đổi với phụ huynh, sinh viên về nguyện vọng rút học phí");
+  assert.deepEqual(tasks[3].departmentCodes, ["QLDT", "TCKT"]);
+  assert.deepEqual(tasks[4].departmentCodes, ["KTDBCL", "TCHCQT"]);
+});
