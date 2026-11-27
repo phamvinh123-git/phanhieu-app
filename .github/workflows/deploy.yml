@@ -1,0 +1,50 @@
+name: Deploy to VPS
+
+# Mỗi lần có code mới trên nhánh main: chạy kiểm tra, rồi SSH vào VPS để cập
+# nhật app (deploy/vps-setup.sh — build, đồng bộ bảng, PM2 reload). Dữ liệu
+# và file .env trên VPS được giữ nguyên.
+#
+# Cần 2 secret trong GitHub (Settings → Secrets and variables → Actions):
+#   VPS_HOST    — địa chỉ IP của VPS
+#   VPS_SSH_KEY — khoá riêng (private key) dùng riêng cho deploy. Trên VPS, khoá
+#                 công khai tương ứng được gắn "command=..." trong
+#                 authorized_keys nên khoá này CHỈ chạy được lệnh deploy.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy-phanhieu
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Kiểm tra kiểu dữ liệu (TypeScript)
+        run: npx tsc --noEmit
+      - name: Chạy test
+        run: npm test
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Deploy
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -t ed25519 "$HOST" > ~/.ssh/known_hosts
+          # Chỉ kết nối đúng VPS của Phân hiệu (cùng vân tay khoá máy chủ với repo taichinhketoan)
+          ssh-keygen -lf ~/.ssh/known_hosts | grep -qF "SHA256:4bmMG0XOXdAXte0y+fxI3OlQ55pDA8TYnoEcDPQXjnM"
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes root@"$HOST"

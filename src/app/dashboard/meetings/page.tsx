@@ -13,10 +13,13 @@ import {
   AlertTriangle,
   FileText,
   CalendarDays,
+  Search,
+  Eye,
 } from "lucide-react";
 import { useMe } from "@/components/MeProvider";
 import { ModalShell } from "@/components/ModalShell";
 import { can, type RoleCode } from "@/lib/rbac-config";
+import { PageHeader, EmptyState, formatDate } from "@/components/ui";
 
 type Meeting = {
   id: number;
@@ -33,6 +36,11 @@ export default function MeetingsPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
+  const [viewing, setViewing] = useState<Meeting | null>(null);
+  const [query, setQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const canCreate = (me?.roles.map((r) => r.role) as RoleCode[] | undefined)?.some((r) =>
     can(r, "meetings", "create")
@@ -58,91 +66,152 @@ export default function MeetingsPage() {
     if (res.ok) load();
   }
 
+  const q = query.trim().toLowerCase();
+  const visible = meetings.filter((m) => {
+    if (q && !m.title.toLowerCase().includes(q) && !(m.content ?? "").toLowerCase().includes(q)) return false;
+    const d = m.meetingDate.slice(0, 10);
+    if (fromDate && d < fromDate) return false;
+    if (toDate && d > toDate) return false;
+    if (statusFilter && m.status !== statusFilter) return false;
+    return true;
+  });
+
   return (
     <div>
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Biên bản họp chủ chốt</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Gõ trực tiếp nội dung biên bản, hệ thống tự trích xuất đầu việc theo mã Phòng đặt
-            trong ngoặc ở cuối mỗi dòng, và gửi thẳng cho các phòng ngay sau khi họp xong.
-          </p>
+      <PageHeader
+        title="Biên bản họp"
+        description="Gõ trực tiếp nội dung biên bản, hệ thống tự trích xuất đầu việc theo mã Phòng đặt trong ngoặc ở cuối mỗi dòng và gửi cho các phòng ngay sau khi họp."
+        actions={
+          canCreate && (
+            <button onClick={() => setShowWizard(true)} className="btn btn-primary">
+              <Plus className="h-4 w-4" /> Tạo biên bản
+            </button>
+          )
+        }
+      />
+
+      <div className="todo-card overflow-hidden">
+        <div className="grid grid-cols-1 gap-3 border-b border-line p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative">
+            <label htmlFor="mt-search" className="field-label">Tìm kiếm</label>
+            <Search className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 text-slate-400" />
+            <input
+              id="mt-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tên cuộc họp hoặc nội dung"
+              className="field pl-9"
+            />
+          </div>
+          <div>
+            <label htmlFor="mt-from" className="field-label">Từ ngày</label>
+            <input id="mt-from" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="field" />
+          </div>
+          <div>
+            <label htmlFor="mt-to" className="field-label">Đến ngày</label>
+            <input id="mt-to" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="field" />
+          </div>
+          <div>
+            <label htmlFor="mt-status" className="field-label">Trạng thái</label>
+            <select id="mt-status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="field">
+              <option value="">Tất cả</option>
+              <option value="reviewed">Đã rà soát</option>
+              <option value="draft">Nháp</option>
+            </select>
+          </div>
         </div>
-        {canCreate && (
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setShowWizard(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-red-600 px-3.5 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/20 hover:bg-red-700"
-          >
-            <Plus className="h-4 w-4" /> Soạn biên bản &amp; phân việc
-          </motion.button>
+
+        {loading ? (
+          <div className="space-y-2 p-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-12 animate-pulse rounded-lg bg-slate-100" />
+            ))}
+          </div>
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title={meetings.length === 0 ? "Chưa có biên bản họp nào" : "Không có biên bản phù hợp"}
+            hint={meetings.length === 0 && canCreate ? "Bấm “Tạo biên bản” để soạn biên bản và phân việc." : undefined}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table min-w-[720px]">
+              <thead>
+                <tr>
+                  <th>Mã biên bản</th>
+                  <th>Tên cuộc họp</th>
+                  <th>Ngày họp</th>
+                  <th>Trạng thái</th>
+                  <th className="text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((m) => (
+                  <tr key={m.id}>
+                    <td className="font-medium tabular-nums text-muted">BB-{String(m.id).padStart(3, "0")}</td>
+                    <td className="max-w-[360px]">
+                      <button
+                        onClick={() => setViewing(m)}
+                        className="block max-w-full truncate text-left font-medium text-ink hover:text-red-700"
+                      >
+                        {m.title}
+                      </button>
+                    </td>
+                    <td className="tabular-nums text-muted">{formatDate(m.meetingDate)}</td>
+                    <td>
+                      <span className={`badge ${m.status === "reviewed" ? "badge-done" : "badge-todo"}`}>
+                        {m.status === "reviewed" ? "Đã rà soát" : "Nháp"}
+                      </span>
+                    </td>
+                    <td className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setViewing(m)} className="btn btn-secondary btn-sm">
+                          <Eye className="h-3.5 w-3.5" /> Xem
+                        </button>
+                        {canCreate && (
+                          <button onClick={() => toggleReviewed(m)} className="btn btn-soft btn-sm">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            {m.status === "reviewed" ? "Chuyển về nháp" : "Đã rà soát"}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {loading ? (
-        <div className="space-y-3">
-          {[0, 1].map((i) => (
-            <div key={i} className="todo-card h-24 animate-pulse bg-slate-100/70" />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <AnimatePresence initial={false}>
-            {meetings.map((m, i) => (
-              <motion.div
-                key={m.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ delay: i * 0.04, type: "spring", stiffness: 340, damping: 30 }}
-                className="todo-card p-4"
+      <AnimatePresence>
+        {viewing && (
+          <ModalShell onClose={() => setViewing(null)} maxWidth="max-w-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-medium tabular-nums text-muted">BB-{String(viewing.id).padStart(3, "0")}</p>
+                <h2 className="text-lg font-semibold text-ink">{viewing.title}</h2>
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
+                  <CalendarDays className="h-4 w-4" /> Ngày họp {formatDate(viewing.meetingDate)}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewing(null)}
+                aria-label="Đóng"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-slate-900">{m.title}</p>
-                      <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
-                        <CalendarDays className="h-3 w-3" />
-                        {new Date(m.meetingDate).toLocaleDateString("vi-VN")}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${
-                      m.status === "reviewed" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {m.status === "reviewed" ? "Đã rà soát" : "Nháp"}
-                  </span>
-                </div>
-                {m.content && (
-                  <p className="mt-2.5 whitespace-pre-line pl-12 text-sm text-slate-600">{m.content}</p>
-                )}
-                {canCreate && (
-                  <button
-                    onClick={() => toggleReviewed(m)}
-                    className="mt-3 ml-12 inline-flex items-center gap-1.5 text-xs font-medium text-red-600 transition-colors hover:text-red-800"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    {m.status === "reviewed" ? "Chuyển về nháp" : "Đánh dấu đã rà soát"}
-                  </button>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          {meetings.length === 0 && (
-            <div className="todo-card flex flex-col items-center gap-2 p-10 text-center">
-              <FileText className="h-6 w-6 text-slate-300" />
-              <p className="text-sm text-slate-400">Chưa có biên bản họp nào.</p>
+                <X className="h-5 w-5" />
+              </button>
             </div>
-          )}
-        </div>
-      )}
+            <h3 className="mb-2 text-[13px] font-semibold text-muted">Nội dung / kết luận</h3>
+            {viewing.content ? (
+              <p className="whitespace-pre-line rounded-lg bg-background p-4 text-sm leading-relaxed text-ink">{viewing.content}</p>
+            ) : (
+              <p className="text-sm text-muted">Biên bản không có nội dung.</p>
+            )}
+          </ModalShell>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showWizard && (
@@ -170,16 +239,21 @@ type ExtractedRow = {
   departmentIds: number[];
   priority: "low" | "normal" | "high" | "urgent";
   dueDate: string;
+  autoDue: boolean; // hạn do hệ thống tự nhận diện
+  source: "tag" | "mention" | "section";
+  section?: string;
 };
 
 type SkippedLine = { line: string; reason: "no_tag" | "unmatched_codes"; unmatchedCodes?: string[] };
 
-const EXAMPLE_TEXT = `1. Hoàn thiện kế hoạch tuyển sinh đợt bổ sung, gửi Ban Giám Đốc trước 25/08/2026 (DT).
-2. Rà soát lại quy chế chi tiêu nội bộ, phối hợp cung cấp số liệu (HCTH, DT).
-3. Chuẩn bị cơ sở vật chất phòng học cho đợt nhập học mới (HCTH).`;
+const EXAMPLE_TEXT = `1. Rà soát chương trình đào tạo học kỳ mới trước 25/8 (QLDT).
+2. Giao Phòng Tổ chức - Hành chính - Quản trị chủ trì, phối hợp TCKT chuẩn bị quy chế chi tiêu nội bộ, hoàn thành trong tháng 9.
 
-const inputCls =
-  "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-red-400 focus:ring-1 focus:ring-red-200";
+II. Phòng Khảo thí và Đảm bảo Chất lượng giáo dục:
+- Khẩn trương hoàn thiện hồ sơ tự đánh giá, chậm nhất ngày 15/10/2026.
+- Tổ chức thi kết thúc học phần; tổng hợp kết quả thi học kỳ I.`;
+
+const inputCls = "field";
 
 function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -209,7 +283,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
     const res = await fetch("/api/meetings/extract", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, meetingDate }),
     });
     setExtracting(false);
     if (!res.ok) {
@@ -219,13 +293,26 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
     }
     const data = await res.json();
     setRows(
-      (data.tasks as { line: string; title: string; departmentIds: number[]; dueDate: string | null }[]).map((t, i) => ({
+      (
+        data.tasks as {
+          line: string;
+          title: string;
+          departmentIds: number[];
+          dueDate: string | null;
+          priority: ExtractedRow["priority"];
+          source: ExtractedRow["source"];
+          section?: string;
+        }[]
+      ).map((t, i) => ({
         key: `${i}-${t.line}`,
         line: t.line,
         title: t.title,
         departmentIds: t.departmentIds,
-        priority: "normal",
+        priority: t.priority ?? "normal",
         dueDate: t.dueDate ?? "",
+        autoDue: Boolean(t.dueDate),
+        source: t.source ?? "tag",
+        section: t.section,
       }))
     );
     setSkipped(data.skipped ?? []);
@@ -287,10 +374,10 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
   return (
     <ModalShell onClose={onClose} maxWidth="max-w-2xl">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-900">
+        <h2 className="text-lg font-semibold text-ink">
           {step === 1 ? "Soạn biên bản họp" : "Rà soát nhiệm vụ trích xuất được"}
         </h2>
-        <button onClick={onClose} className="text-slate-400 transition-colors hover:text-slate-600">
+        <button onClick={onClose} aria-label="Đóng" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -309,7 +396,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
             {s === 1 && (
               <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100">
                 <motion.div
-                  className="h-full bg-red-500"
+                  className="h-full bg-red-600"
                   initial={false}
                   animate={{ width: step === 2 ? "100%" : "0%" }}
                   transition={{ type: "spring", stiffness: 200, damping: 26 }}
@@ -332,11 +419,11 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
           >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Tiêu đề cuộc họp</label>
+                <label className="field-label">Tiêu đề cuộc họp</label>
                 <input required value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Ngày họp</label>
+                <label className="field-label">Ngày họp</label>
                 <input
                   type="date"
                   required
@@ -347,17 +434,20 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Nội dung biên bản — mỗi dòng là một đầu việc, đặt mã Phòng trong ngoặc ở cuối dòng
-                (nhiều Phòng thì cách nhau bằng dấu phẩy). Mã Phòng hiện có:{" "}
-                {departments.map((d) => d.code).join(", ") || "..."}
-              </label>
+              <label className="field-label">Nội dung biên bản</label>
+              <div className="mb-2 rounded-lg bg-background p-3 text-xs leading-relaxed text-muted">
+                Dán nguyên biên bản vào đây. Hệ thống tự nhận Phòng phụ trách khi: có mã trong ngoặc cuối dòng{" "}
+                <b className="text-ink">(QLDT, TCKT)</b>; câu nhắc tên hoặc mã Phòng (“Giao Phòng Quản lý Đào tạo chủ
+                trì…”, “Phòng TCKT: …”); hoặc các gạch đầu dòng nằm dưới tiêu đề mục của một Phòng. Hạn hoàn thành
+                nhận được: 25/8, 25/08/2026, “ngày 25 tháng 8”, “trong tháng 9”, “trước quý IV”, “tuần sau”. Mã Phòng
+                hiện có: <b className="text-ink">{departments.map((d) => d.code).join(", ") || "..."}</b>
+              </div>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                rows={10}
+                rows={12}
                 placeholder={EXAMPLE_TEXT}
-                className={`${inputCls} font-mono text-xs`}
+                className={`${inputCls} font-mono text-[13px]`}
               />
             </div>
 
@@ -367,7 +457,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600"
+                  className="rounded-lg bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
                 >
                   {error}
                 </motion.p>
@@ -379,7 +469,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
               whileTap={{ scale: 0.98 }}
               onClick={runExtract}
               disabled={extracting || !title || !meetingDate}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-red-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/20 hover:bg-red-700 disabled:opacity-60"
+              className="btn btn-primary w-full"
             >
               <Wand2 className={`h-4 w-4 ${extracting ? "animate-pulse" : ""}`} />
               {extracting ? "Đang trích xuất..." : "Trích xuất nhiệm vụ"}
@@ -396,13 +486,18 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             className="space-y-3"
           >
-            <p className="text-sm text-slate-500">
-              Trích xuất được <b>{rows.length}</b> nhiệm vụ. Kiểm tra lại tiêu đề, Phòng phụ trách
-              trước khi gửi — có thể sửa hoặc xoá từng dòng.
+            <p className="text-sm text-muted">
+              Trích xuất được <b className="text-ink">{rows.length}</b> nhiệm vụ
+              {rows.length > 0 && (
+                <>
+                  {" "}· <b className="text-ink">{rows.filter((r) => r.dueDate).length}</b> có hạn hoàn thành
+                </>
+              )}
+              . Kiểm tra lại tiêu đề, Phòng phụ trách và hạn trước khi gửi — có thể sửa hoặc xoá từng dòng.
             </p>
 
             {skipped.length > 0 && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              <div className="rounded-lg border border-[#FDE3BF] bg-[#FFF4E5] p-3 text-xs text-[#B45309]">
                 <p className="mb-1 flex items-center gap-1 font-medium">
                   <AlertTriangle className="h-3.5 w-3.5" /> {skipped.length} dòng không được nhận diện là nhiệm vụ
                 </p>
@@ -412,7 +507,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                       {s.line}
                       {s.reason === "unmatched_codes" && s.unmatchedCodes?.length
                         ? ` — mã không nhận diện được: ${s.unmatchedCodes.join(", ")}`
-                        : " — không có mã Phòng trong ngoặc ở cuối dòng"}
+                        : " — không xác định được Phòng phụ trách"}
                     </li>
                   ))}
                 </ul>
@@ -429,13 +524,13 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.96 }}
                     transition={{ delay: i * 0.03, type: "spring", stiffness: 340, damping: 30 }}
-                    className="rounded-xl border border-slate-200 p-3"
+                    className="rounded-lg border border-line p-3"
                   >
                     <div className="mb-2 flex items-start gap-2">
                       <input
                         value={r.title}
                         onChange={(e) => updateRow(r.key, { title: e.target.value })}
-                        className="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-200"
+                        className="field h-9 flex-1"
                       />
                       <button
                         onClick={() => removeRow(r.key)}
@@ -444,6 +539,11 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
+                    <p className="mb-2 text-xs text-muted">
+                      {r.source === "tag" && "Phòng lấy từ mã trong ngoặc"}
+                      {r.source === "mention" && "Phòng lấy từ nội dung câu"}
+                      {r.source === "section" && `Phòng lấy theo mục: ${r.section ?? ""}`}
+                    </p>
                     <div className="mb-2 flex flex-wrap gap-1.5">
                       {departments.map((d) => (
                         <motion.button
@@ -462,23 +562,36 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                       ))}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
+                      <label className="sr-only" htmlFor={`prio-${r.key}`}>Mức ưu tiên</label>
                       <select
+                        id={`prio-${r.key}`}
                         value={r.priority}
                         onChange={(e) => updateRow(r.key, { priority: e.target.value as ExtractedRow["priority"] })}
-                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-red-400"
+                        className="field h-9 text-[13px]"
                       >
                         <option value="low">Ưu tiên thấp</option>
                         <option value="normal">Ưu tiên bình thường</option>
                         <option value="high">Ưu tiên cao</option>
                         <option value="urgent">Khẩn cấp</option>
                       </select>
-                      <input
-                        type="date"
-                        value={r.dueDate}
-                        onChange={(e) => updateRow(r.key, { dueDate: e.target.value })}
-                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-red-400"
-                      />
+                      <div>
+                        <label className="sr-only" htmlFor={`due-${r.key}`}>Hạn hoàn thành</label>
+                        <input
+                          id={`due-${r.key}`}
+                          type="date"
+                          value={r.dueDate}
+                          onChange={(e) => updateRow(r.key, { dueDate: e.target.value, autoDue: false })}
+                          className={`field h-9 text-[13px] ${r.dueDate ? "" : "border-[#F5C27A] bg-[#FFF8EE]"}`}
+                        />
+                      </div>
                     </div>
+                    <p className={`mt-1.5 text-xs ${r.dueDate ? "text-done" : "text-[#B45309]"}`}>
+                      {r.dueDate
+                        ? r.autoDue
+                          ? `Hạn tự nhận từ biên bản: ${r.dueDate.split("-").reverse().join("/")}`
+                          : `Hạn: ${r.dueDate.split("-").reverse().join("/")}`
+                        : "Biên bản không ghi hạn cho việc này — hãy chọn hạn nếu cần."}
+                    </p>
                     <AnimatePresence>
                       {r.departmentIds.length === 0 && (
                         <motion.p
@@ -500,8 +613,9 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                 ))}
               </AnimatePresence>
               {rows.length === 0 && (
-                <p className="rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-400">
-                  Không trích xuất được nhiệm vụ nào. Quay lại và kiểm tra định dạng mã Phòng trong ngoặc.
+                <p className="rounded-lg bg-background p-4 text-center text-sm text-muted">
+                  Không trích xuất được nhiệm vụ nào. Quay lại và ghi rõ Phòng phụ trách (mã trong ngoặc, tên Phòng
+                  trong câu, hoặc tiêu đề mục theo Phòng).
                 </p>
               )}
             </div>
@@ -512,7 +626,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600"
+                  className="rounded-lg bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
                 >
                   {error}
                 </motion.p>
@@ -522,7 +636,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
             <div className="flex gap-2">
               <button
                 onClick={() => setStep(1)}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="btn btn-secondary"
               >
                 <ArrowLeft className="h-4 w-4" /> Quay lại sửa biên bản
               </button>
@@ -531,7 +645,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                 whileTap={{ scale: 0.98 }}
                 onClick={dispatch}
                 disabled={sending || rows.some((r) => r.departmentIds.length === 0)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/20 hover:bg-red-700 disabled:opacity-60"
+                className="btn btn-primary flex-1"
               >
                 <Send className="h-4 w-4" />
                 {sending ? "Đang gửi..." : `Gửi ${rows.length} nhiệm vụ cho các Phòng`}

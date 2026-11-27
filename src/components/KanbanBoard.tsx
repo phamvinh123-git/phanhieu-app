@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, X, Clock, MessageSquare, User as UserIcon, Building2, Check, Inbox, Filter, FileText } from "lucide-react";
+import { Plus, X, Clock, MessageSquare, Building2, Check, Inbox, Search, CalendarDays, FileText, Flag, Layers, Send, SlidersHorizontal } from "lucide-react";
 import { useMe } from "./MeProvider";
 import { ModalShell } from "./ModalShell";
 import { can, type ModuleCode, type RoleCode } from "@/lib/rbac-config";
+import { PageHeader, StatusBadge, STATUS_META, PRIORITY_META, isOverdue, formatDate } from "./ui";
 
 type Level = "branch" | "department";
 
@@ -30,37 +31,14 @@ type Task = {
 type Meeting = { id: number; title: string; meetingDate: string };
 
 function meetingLabel(m: Meeting) {
-  const d = new Date(m.meetingDate);
-  const ds = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-  return `${m.title} (${ds})`;
+  return `${m.title} (${formatDate(m.meetingDate)})`;
 }
 
-const STATUS_COLUMNS: { key: Task["status"]; label: string; dot: string; headerBg: string }[] = [
-  { key: "todo", label: "Cần làm", dot: "bg-slate-400", headerBg: "from-slate-100 to-transparent" },
-  { key: "in_progress", label: "Đang thực hiện", dot: "bg-red-500", headerBg: "from-red-100 to-transparent" },
-  { key: "done", label: "Hoàn thành", dot: "bg-emerald-500", headerBg: "from-emerald-100 to-transparent" },
+const STATUS_COLUMNS: { key: Task["status"]; label: string; color: string; tint: string }[] = [
+  { key: "todo", label: STATUS_META.todo.label, color: STATUS_META.todo.color, tint: "#FFF8EE" },
+  { key: "in_progress", label: STATUS_META.in_progress.label, color: STATUS_META.in_progress.color, tint: "#F3F8FE" },
+  { key: "done", label: STATUS_META.done.label, color: STATUS_META.done.color, tint: "#F2FBF6" },
 ];
-
-const PRIORITY_STYLE: Record<Task["priority"], string> = {
-  low: "bg-slate-100 text-slate-600",
-  normal: "bg-sky-100 text-sky-700",
-  high: "bg-amber-100 text-amber-700",
-  urgent: "bg-red-100 text-red-700",
-};
-
-const PRIORITY_DOT: Record<Task["priority"], string> = {
-  low: "bg-slate-400",
-  normal: "bg-sky-500",
-  high: "bg-amber-500",
-  urgent: "bg-red-500",
-};
-
-const PRIORITY_LABEL: Record<Task["priority"], string> = {
-  low: "Thấp",
-  normal: "Bình thường",
-  high: "Cao",
-  urgent: "Khẩn cấp",
-};
 
 const MODULE_BY_LEVEL: Record<Level, ModuleCode> = {
   branch: "branch_tasks",
@@ -90,6 +68,10 @@ export function KanbanBoard({
   const [includeNoDue, setIncludeNoDue] = useState(true);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [selectedMeetingId, setSelectedMeetingId] = useState("");
+  const [query, setQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const moduleCode = MODULE_BY_LEVEL[level];
   const myRoleCodes = useMemo(() => (me?.roles.map((r) => r.role) ?? []) as RoleCode[], [me]);
@@ -153,7 +135,14 @@ export function KanbanBoard({
   // Hai bộ lọc độc lập, kết hợp với nhau (AND): lọc theo cuộc họp gốc và
   // lọc theo khoảng hạn hoàn thành — mỗi bộ lọc có thể bật/tắt riêng.
   const filteredTasks = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return tasks.filter((t) => {
+      if (q && !t.title.toLowerCase().includes(q) && !`#${t.id}`.includes(q)) return false;
+      if (priorityFilter && t.priority !== priorityFilter) return false;
+      if (deptFilter) {
+        const ids = level === "department" ? [t.departmentId] : (t.departments ?? []).map((d) => d.id);
+        if (!ids.includes(Number(deptFilter))) return false;
+      }
       if (meetingFilterActive && String(t.meetingId ?? "") !== selectedMeetingId) return false;
       if (dateFilterActive) {
         if (!t.dueDate) return includeNoDue;
@@ -163,14 +152,16 @@ export function KanbanBoard({
       }
       return true;
     });
-  }, [tasks, fromDate, toDate, includeNoDue, dateFilterActive, meetingFilterActive, selectedMeetingId]);
+  }, [tasks, query, priorityFilter, deptFilter, level, fromDate, toDate, includeNoDue, dateFilterActive, meetingFilterActive, selectedMeetingId]);
 
-  function clearDateFilter() {
+  const anyFilter = Boolean(query || priorityFilter || deptFilter || dateFilterActive || meetingFilterActive);
+
+  function clearFilters() {
+    setQuery("");
+    setPriorityFilter("");
+    setDeptFilter("");
     setFromDate("");
     setToDate("");
-  }
-
-  function clearMeetingFilter() {
     setSelectedMeetingId("");
   }
 
@@ -182,228 +173,254 @@ export function KanbanBoard({
 
   return (
     <div>
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">{title}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">{description}</p>
-        </div>
-        {canCreate && (
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setShowCreate(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-xl bg-red-600 px-3.5 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/25 transition-colors hover:bg-red-700"
-          >
-            <Plus className="h-4 w-4" /> Tạo công việc
-          </motion.button>
-        )}
-      </div>
+      <PageHeader
+        title={title}
+        description={description}
+        actions={
+          canCreate && (
+            <button onClick={() => setShowCreate(true)} className="btn btn-primary">
+              <Plus className="h-4 w-4" /> Tạo công việc
+            </button>
+          )
+        }
+      />
 
-      <div className="todo-card mb-5 flex flex-wrap items-end gap-3 px-4 py-3.5">
-        <div className="flex items-center gap-1.5 pb-2 text-sm font-medium text-slate-500">
-          <Filter className="h-4 w-4 text-red-500" />
-          Lọc theo hạn hoàn thành
-        </div>
-        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
-          Từ ngày
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-colors focus:border-red-300"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
-          Đến ngày
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-colors focus:border-red-300"
-          />
-        </label>
-        <label className="flex items-center gap-1.5 pb-2.5 text-xs font-medium text-slate-500">
-          <input
-            type="checkbox"
-            checked={includeNoDue}
-            onChange={(e) => setIncludeNoDue(e.target.checked)}
-            className="h-3.5 w-3.5 rounded border-slate-300 text-red-600 focus:ring-red-400"
-          />
-          Hiển thị cả công việc chưa có hạn
-        </label>
-        {dateFilterActive && (
-          <button
-            onClick={clearDateFilter}
-            className="mb-0.5 flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200"
-          >
-            <X className="h-3.5 w-3.5" /> Xóa lọc
-          </button>
-        )}
-        {dateFilterActive && (
-          <span className="pb-2.5 text-xs text-slate-400">
-            Đang hiển thị {filteredTasks.length}/{tasks.length} công việc
-          </span>
-        )}
-      </div>
-
-      {level === "branch" && meetings.length > 0 && (
-        <div className="todo-card mb-5 flex flex-wrap items-end gap-3 px-4 py-3.5">
-          <div className="flex items-center gap-1.5 pb-2 text-sm font-medium text-slate-500">
-            <FileText className="h-4 w-4 text-red-500" />
-            Lọc theo cuộc họp
+      {/* Bộ lọc */}
+      <div className="todo-card mb-5 p-4">
+        <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 ${level === "branch" && meetings.length > 0 ? "xl:grid-cols-6" : "xl:grid-cols-5"}`}>
+          <div className="relative sm:col-span-2 lg:col-span-1">
+            <label htmlFor="kb-search" className="field-label">Tìm kiếm</label>
+            <Search className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 text-slate-400" />
+            <input
+              id="kb-search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tên hoặc mã công việc"
+              className="field pl-9"
+            />
           </div>
-          <label className="flex flex-col gap-1 text-xs font-medium text-slate-500">
-            Chọn cuộc họp
-            <select
-              value={selectedMeetingId}
-              onChange={(e) => setSelectedMeetingId(e.target.value)}
-              className="min-w-[220px] rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition-colors focus:border-red-300"
-            >
-              <option value="">Tất cả cuộc họp</option>
-              {meetings.map((m) => (
-                <option key={m.id} value={String(m.id)}>
-                  {meetingLabel(m)}
+          <button
+            type="button"
+            onClick={() => setShowFilters((v) => !v)}
+            aria-expanded={showFilters}
+            className="btn btn-secondary sm:col-span-2 lg:hidden"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {showFilters ? "Ẩn bộ lọc" : "Bộ lọc"}
+          </button>
+          <div className={`${showFilters ? "contents" : "hidden"} lg:contents`}>
+          <div>
+            <label htmlFor="kb-dept" className="field-label">Đơn vị</label>
+            <select id="kb-dept" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className="field">
+              <option value="">Tất cả đơn vị</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
                 </option>
               ))}
             </select>
-          </label>
-          {meetingFilterActive && (
-            <button
-              onClick={clearMeetingFilter}
-              className="mb-0.5 flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200"
-            >
-              <X className="h-3.5 w-3.5" /> Xóa lọc
-            </button>
+          </div>
+          <div>
+            <label htmlFor="kb-priority" className="field-label">Mức ưu tiên</label>
+            <select id="kb-priority" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="field">
+              <option value="">Tất cả mức</option>
+              {(Object.keys(PRIORITY_META) as Task["priority"][]).map((p) => (
+                <option key={p} value={p}>
+                  {PRIORITY_META[p].label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {level === "branch" && meetings.length > 0 && (
+            <div>
+              <label htmlFor="kb-meeting" className="field-label">Cuộc họp</label>
+              <select
+                id="kb-meeting"
+                value={selectedMeetingId}
+                onChange={(e) => setSelectedMeetingId(e.target.value)}
+                className="field"
+              >
+                <option value="">Tất cả cuộc họp</option>
+                {meetings.map((m) => (
+                  <option key={m.id} value={String(m.id)}>
+                    {meetingLabel(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
-          {meetingFilterActive && (
-            <span className="pb-2.5 text-xs text-slate-400">
-              Đang hiển thị {filteredTasks.length}/{tasks.length} công việc
-            </span>
+          <div>
+            <label htmlFor="kb-from" className="field-label">Hạn từ ngày</label>
+            <input id="kb-from" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="field" />
+          </div>
+          <div>
+            <label htmlFor="kb-to" className="field-label">Hạn đến ngày</label>
+            <input id="kb-to" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="field" />
+          </div>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-muted">
+          {dateFilterActive && (
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={includeNoDue} onChange={(e) => setIncludeNoDue(e.target.checked)} className="h-4 w-4" />
+              Hiển thị cả công việc chưa có hạn
+            </label>
+          )}
+          {anyFilter && (
+            <>
+              <span className="tabular-nums">
+                Đang hiển thị {filteredTasks.length}/{tasks.length} công việc
+              </span>
+              <button onClick={clearFilters} className="btn btn-secondary btn-sm">
+                <X className="h-3.5 w-3.5" /> Xoá bộ lọc
+              </button>
+            </>
           )}
         </div>
-      )}
+      </div>
 
       <AnimatePresence>
         {error && (
           <motion.p
+            role="alert"
             initial={{ opacity: 0, y: -6, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600"
+            className="mb-3 rounded-lg bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
           >
             {error}
           </motion.p>
         )}
       </AnimatePresence>
 
-      {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {STATUS_COLUMNS.map((col) => (
-            <div key={col.key} className="todo-card h-40 animate-pulse bg-slate-50" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {STATUS_COLUMNS.map((col) => (
+      {/* Bảng Kanban: 3 cột trên desktop, cuộn ngang trên điện thoại */}
+      <div className="thin-scrollbar -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-3 lg:overflow-visible">
+        {STATUS_COLUMNS.map((col) => (
+          <section
+            key={col.key}
+            aria-label={col.label}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOverCol(col.key);
+            }}
+            onDragLeave={() => setDragOverCol((c) => (c === col.key ? null : c))}
+            onDrop={() => {
+              if (dragId != null) updateStatus(dragId, col.key);
+              setDragId(null);
+              setDragOverCol(null);
+            }}
+            className={`flex w-[85vw] max-w-[380px] shrink-0 snap-start flex-col rounded-xl border bg-white sm:w-[340px] lg:w-auto lg:max-w-none ${
+              dragOverCol === col.key ? "border-red-300 ring-2 ring-red-100" : "border-line"
+            }`}
+          >
             <div
-              key={col.key}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOverCol(col.key);
-              }}
-              onDragLeave={() => setDragOverCol((c) => (c === col.key ? null : c))}
-              onDrop={() => {
-                if (dragId != null) updateStatus(dragId, col.key);
-                setDragId(null);
-                setDragOverCol(null);
-              }}
-              className={`todo-card min-h-[220px] overflow-hidden p-0 transition-shadow ${
-                dragOverCol === col.key ? "ring-2 ring-red-400" : ""
-              }`}
+              className="flex items-center justify-between rounded-t-xl border-b border-line px-4 py-3"
+              style={{ background: col.tint, boxShadow: `inset 0 3px 0 ${col.color}` }}
             >
-              <div className={`flex items-center justify-between bg-gradient-to-b ${col.headerBg} px-3.5 py-3`}>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                  <span className={`h-2 w-2 rounded-full ${col.dot}`} />
-                  {col.label}
-                </h3>
-                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-500 shadow-sm">
-                  {columns[col.key].length}
-                </span>
-              </div>
-              <div className="thin-scrollbar max-h-[65vh] space-y-2 overflow-y-auto p-3">
-                <AnimatePresence initial={false}>
-                  {columns[col.key].map((t) => (
-                    <motion.div
-                      key={t.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                      whileHover={{ y: -2 }}
-                      draggable
-                      onDragStart={() => setDragId(t.id)}
-                      className="group cursor-pointer rounded-xl border border-slate-100 bg-white p-3 text-sm shadow-sm transition-colors hover:border-red-200 hover:shadow-md"
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateStatus(t.id, t.status === "done" ? "todo" : "done");
-                          }}
-                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                            t.status === "done"
-                              ? "border-emerald-500 bg-emerald-500 text-white"
-                              : "border-slate-300 text-transparent hover:border-red-400"
-                          }`}
-                          aria-label="Đánh dấu hoàn thành"
-                        >
-                          {t.status === "done" && <Check className="h-3 w-3 animate-check-pop" strokeWidth={3} />}
-                        </button>
-                        <div className="min-w-0 flex-1" onClick={() => setActiveTask(t)}>
-                          <p
-                            className={`font-medium leading-snug ${
-                              t.status === "done" ? "text-slate-400 line-through" : "text-slate-800"
-                            }`}
-                          >
-                            {t.title}
-                          </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${PRIORITY_STYLE[t.priority]}`}
-                            >
-                              <span className={`h-1.5 w-1.5 rounded-full ${PRIORITY_DOT[t.priority]}`} />
-                              {PRIORITY_LABEL[t.priority]}
-                            </span>
-                            {t.dueDate && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
-                                <Clock className="h-3 w-3" />
-                                {new Date(t.dueDate).toLocaleDateString("vi-VN")}
-                              </span>
-                            )}
-                            {level === "branch" && (t.departments?.length ?? 0) > 1 && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">
-                                <Building2 className="h-3 w-3" /> Liên phòng
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-1.5 text-[11px] text-slate-400">{deptBadge(t)}</div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                {columns[col.key].length === 0 && (
-                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-slate-300">
-                    <Inbox className="h-6 w-6" />
-                    <p className="text-xs">Trống</p>
-                  </div>
-                )}
-              </div>
+              <h3 className="flex items-center gap-2 text-[15px] font-semibold text-ink">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: col.color }} />
+                {col.label}
+              </h3>
+              <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold tabular-nums text-muted ring-1 ring-line">
+                {loading ? "…" : columns[col.key].length}
+              </span>
             </div>
-          ))}
-        </div>
-      )}
+            <div className="thin-scrollbar max-h-[68vh] min-h-[200px] flex-1 space-y-2.5 overflow-y-auto p-3">
+              {loading ? (
+                [0, 1].map((i) => <div key={i} className="h-24 animate-pulse rounded-lg bg-slate-100" />)
+              ) : (
+                <>
+                  <AnimatePresence initial={false}>
+                    {columns[col.key].map((t) => {
+                      const overdue = isOverdue(t);
+                      return (
+                        <motion.article
+                          key={t.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.97 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.97 }}
+                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          draggable
+                          onDragStart={() => setDragId(t.id)}
+                          onClick={() => setActiveTask(t)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setActiveTask(t);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Mở chi tiết: ${t.title}`}
+                          className={`group cursor-pointer rounded-lg border bg-white p-3 transition-colors hover:border-red-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 ${
+                            overdue ? "border-l-[3px] border-[#F5C2C7] border-l-overdue" : "border-line"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateStatus(t.id, t.status === "done" ? "todo" : "done");
+                              }}
+                              className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                                t.status === "done"
+                                  ? "border-done bg-done text-white"
+                                  : "border-slate-300 text-transparent hover:border-done"
+                              }`}
+                              aria-label={t.status === "done" ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành"}
+                            >
+                              {t.status === "done" && <Check className="h-3 w-3 animate-check-pop" strokeWidth={3} />}
+                            </button>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium tabular-nums text-muted">#{t.id}</p>
+                              <p
+                                className={`text-[15px] font-semibold leading-snug ${
+                                  t.status === "done" ? "text-slate-400 line-through" : "text-ink"
+                                }`}
+                              >
+                                {t.title}
+                              </p>
+                              {deptBadge(t) && (
+                                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+                                  <Building2 className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{deptBadge(t)}</span>
+                                </p>
+                              )}
+                              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                                <span className={`badge ${PRIORITY_META[t.priority].cls}`}>
+                                  <Flag className="h-3 w-3" />
+                                  {PRIORITY_META[t.priority].label}
+                                </span>
+                                {t.dueDate && (
+                                  <span className={`badge ${overdue ? "badge-overdue" : "badge-neutral"}`}>
+                                    <Clock className="h-3 w-3" />
+                                    {formatDate(t.dueDate)}
+                                  </span>
+                                )}
+                                {overdue && <span className="badge badge-overdue">Quá hạn</span>}
+                                {level === "branch" && (t.departments?.length ?? 0) > 1 && (
+                                  <span className="badge badge-progress">Liên phòng</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.article>
+                      );
+                    })}
+                  </AnimatePresence>
+                  {columns[col.key].length === 0 && (
+                    <div className="flex flex-col items-center justify-center gap-2 py-10 text-slate-300">
+                      <Inbox className="h-6 w-6" />
+                      <p className="text-xs text-slate-400">{anyFilter ? "Không có việc khớp bộ lọc" : "Chưa có công việc"}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
 
       <AnimatePresence>
         {showCreate && (
@@ -422,7 +439,12 @@ export function KanbanBoard({
 
       <AnimatePresence>
         {activeTask && (
-          <TaskDetailModal task={activeTask} deptName={deptName} onClose={() => setActiveTask(null)} />
+          <TaskDetailDrawer
+            task={tasks.find((t) => t.id === activeTask.id) ?? activeTask}
+            deptName={deptName}
+            onClose={() => setActiveTask(null)}
+            onChangeStatus={(status) => updateStatus(activeTask.id, status)}
+          />
         )}
       </AnimatePresence>
     </div>
@@ -484,48 +506,31 @@ function CreateTaskModal({
   }
 
   return (
-    <ModalShell onClose={onClose}>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-slate-900">Tạo công việc mới</h2>
-        <button onClick={onClose} className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
+    <ModalShell onClose={onClose} maxWidth="max-w-lg">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-ink">Tạo công việc mới</h2>
+        <button onClick={onClose} aria-label="Đóng" className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600">
           <X className="h-5 w-5" />
         </button>
       </div>
 
-      <form onSubmit={submit} className="space-y-3">
+      <form onSubmit={submit} className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Tiêu đề</label>
-          <input
-            required
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-red-400 focus:ring-1 focus:ring-red-200"
-          />
+          <label htmlFor="ct-title" className="field-label">Tên công việc <span className="text-red-600">*</span></label>
+          <input id="ct-title" required value={title} onChange={(e) => setTitle(e.target.value)} className="field" />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">Mô tả</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={2}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-red-400 focus:ring-1 focus:ring-red-200"
-          />
+          <label htmlFor="ct-desc" className="field-label">Mô tả</label>
+          <textarea id="ct-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="field" />
         </div>
 
         {level === "branch" ? (
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
-              Giao cho Phòng (chọn nhiều nếu là việc phối hợp liên phòng)
-            </label>
-            <div className="max-h-36 space-y-1 overflow-y-auto rounded-xl border border-slate-200 p-2">
+            <span className="field-label">Giao cho Phòng (chọn nhiều nếu là việc phối hợp liên phòng)</span>
+            <div className="thin-scrollbar max-h-40 space-y-0.5 overflow-y-auto rounded-lg border border-[#d0d5dd] p-1.5">
               {departments.map((d) => (
-                <label key={d.id} className="flex items-center gap-2 rounded-lg px-1.5 py-1 text-sm transition-colors hover:bg-red-50">
-                  <input
-                    type="checkbox"
-                    checked={departmentIds.includes(d.id)}
-                    onChange={() => toggleDept(d.id)}
-                    className="accent-red-600"
-                  />
+                <label key={d.id} className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-md px-2 text-sm hover:bg-red-50">
+                  <input type="checkbox" checked={departmentIds.includes(d.id)} onChange={() => toggleDept(d.id)} className="h-4 w-4" />
                   {d.name}
                 </label>
               ))}
@@ -533,13 +538,8 @@ function CreateTaskModal({
           </div>
         ) : (
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Phòng</label>
-            <select
-              required
-              value={departmentId}
-              onChange={(e) => setDepartmentId(Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            >
+            <label htmlFor="ct-dept" className="field-label">Phòng <span className="text-red-600">*</span></label>
+            <select id="ct-dept" required value={departmentId} onChange={(e) => setDepartmentId(Number(e.target.value))} className="field">
               <option value="">-- Chọn phòng --</option>
               {departments
                 .filter((d) => myDeptScopes.length === 0 || myDeptScopes.includes(d.id))
@@ -552,14 +552,10 @@ function CreateTaskModal({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Mức độ ưu tiên</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as Task["priority"])}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            >
+            <label htmlFor="ct-priority" className="field-label">Mức độ ưu tiên</label>
+            <select id="ct-priority" value={priority} onChange={(e) => setPriority(e.target.value as Task["priority"])} className="field">
               <option value="low">Thấp</option>
               <option value="normal">Bình thường</option>
               <option value="high">Cao</option>
@@ -567,44 +563,39 @@ function CreateTaskModal({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Hạn hoàn thành</label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
+            <label htmlFor="ct-due" className="field-label">Hạn hoàn thành</label>
+            <input id="ct-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="field" />
           </div>
         </div>
 
-        {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
+        {error && <p role="alert" className="rounded-lg bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]">{error}</p>}
 
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
-          type="submit"
-          disabled={saving}
-          className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/25 transition-colors hover:bg-red-700 disabled:opacity-60"
-        >
-          {saving ? "Đang lưu..." : "Tạo công việc"}
-        </motion.button>
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="btn btn-secondary">Huỷ</button>
+          <button type="submit" disabled={saving} className="btn btn-primary">
+            {saving ? "Đang lưu..." : "Tạo công việc"}
+          </button>
+        </div>
       </form>
     </ModalShell>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Modal: chi tiết công việc + bình luận / báo cáo tiến độ
+// Drawer: chi tiết công việc + bình luận / báo cáo tiến độ
+// (mở từ bên phải trên desktop, toàn màn hình trên điện thoại)
 // ---------------------------------------------------------------------------
 
-function TaskDetailModal({
+function TaskDetailDrawer({
   task,
   deptName,
   onClose,
+  onChangeStatus,
 }: {
   task: Task;
   deptName: (id: number | null) => string;
   onClose: () => void;
+  onChangeStatus: (status: Task["status"]) => void;
 }) {
   const [comments, setComments] = useState<{ id: number; content: string; userName: string | null; createdAt: string }[]>([]);
   const [content, setContent] = useState("");
@@ -616,6 +607,12 @@ function TaskDetailModal({
       .then((d) => setComments(d.comments ?? []))
       .finally(() => setLoadingComments(false));
   }, [task.id]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   async function submitComment(e: React.FormEvent) {
     e.preventDefault();
@@ -632,77 +629,153 @@ function TaskDetailModal({
     }
   }
 
+  const overdue = isOverdue(task);
+  const units =
+    task.level === "department"
+      ? [deptName(task.departmentId)].filter(Boolean)
+      : (task.departments ?? []).map((d) => d.name);
+
   return (
-    <ModalShell onClose={onClose} maxWidth="max-w-lg">
-      <div className="mb-3 flex items-start justify-between gap-4">
-        <h2 className="text-base font-semibold text-slate-900">{task.title}</h2>
-        <button onClick={onClose} className="shrink-0 rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      {task.description && <p className="mb-3 text-sm text-slate-600">{task.description}</p>}
-
-      <div className="mb-4 flex flex-wrap gap-2 text-xs text-slate-500">
-        {task.level === "department" && task.departmentId && (
-          <span className="rounded-full bg-slate-100 px-2 py-1">Phòng: {deptName(task.departmentId)}</span>
-        )}
-        {task.level === "branch" &&
-          task.departments?.map((d) => (
-            <span key={d.id} className="rounded-full bg-slate-100 px-2 py-1">
-              {d.name}
-            </span>
-          ))}
-        {task.dueDate && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1">
-            <Clock className="h-3 w-3" /> Hạn: {new Date(task.dueDate).toLocaleDateString("vi-VN")}
-          </span>
-        )}
-      </div>
-
-      <div className="border-t border-slate-100 pt-3">
-        <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-slate-700">
-          <MessageSquare className="h-4 w-4" /> Trao đổi / Báo cáo tiến độ
-        </h3>
-        {loadingComments ? (
-          <p className="text-xs text-slate-400">Đang tải...</p>
-        ) : (
-          <div className="thin-scrollbar mb-3 max-h-52 space-y-2 overflow-y-auto">
-            <AnimatePresence initial={false}>
-              {comments.map((c) => (
-                <motion.div
-                  key={c.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl bg-slate-50 p-2.5 text-sm"
-                >
-                  <p className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                    <UserIcon className="h-3 w-3" /> {c.userName ?? "Người dùng"}
-                  </p>
-                  <p className="text-slate-700">{c.content}</p>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {comments.length === 0 && <p className="text-xs text-slate-300">Chưa có trao đổi nào.</p>}
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-slate-900/30"
+      />
+      <motion.aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Chi tiết công việc ${task.title}`}
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", stiffness: 380, damping: 38 }}
+        className="fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-white shadow-2xl sm:w-[520px]"
+      >
+        <div className="flex items-start gap-3 border-b border-line px-5 py-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium tabular-nums text-muted">
+              #{task.id} · {task.level === "branch" ? "Nhiệm vụ cấp Phân hiệu" : "Nhiệm vụ cấp Phòng"}
+            </p>
+            <h2 className="mt-0.5 text-lg font-semibold leading-snug text-ink">{task.title}</h2>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <StatusBadge status={task.status} />
+              {overdue && <span className="badge badge-overdue">Quá hạn</span>}
+            </div>
           </div>
-        )}
-        <form onSubmit={submitComment} className="flex gap-2">
+          <button onClick={onClose} aria-label="Đóng" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="thin-scrollbar flex-1 space-y-6 overflow-y-auto px-5 py-5">
+          {/* Cập nhật trạng thái — phương án thay cho kéo thả trên thiết bị cảm ứng */}
+          <section>
+            <h3 className="mb-2 text-[13px] font-semibold text-muted">Cập nhật trạng thái</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {STATUS_COLUMNS.map((c) => {
+                const active = task.status === c.key;
+                return (
+                  <button
+                    key={c.key}
+                    type="button"
+                    onClick={() => !active && onChangeStatus(c.key)}
+                    aria-pressed={active}
+                    className={`flex h-10 items-center justify-center gap-1.5 rounded-lg border px-2 text-[13px] font-medium transition-colors ${
+                      active ? "text-white" : "border-line bg-white text-ink hover:bg-slate-50"
+                    }`}
+                    style={active ? { background: c.color, borderColor: c.color } : undefined}
+                  >
+                    {active && <Check className="h-3.5 w-3.5" />}
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-2 text-[13px] font-semibold text-muted">Thông tin</h3>
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-3 rounded-lg bg-background p-4 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="flex items-center gap-1.5 text-xs text-muted"><Building2 className="h-3.5 w-3.5" /> Đơn vị</dt>
+                <dd className="mt-0.5 font-medium text-ink">{units.length ? units.join(", ") : "—"}</dd>
+              </div>
+              <div>
+                <dt className="flex items-center gap-1.5 text-xs text-muted"><CalendarDays className="h-3.5 w-3.5" /> Hạn hoàn thành</dt>
+                <dd className={`mt-0.5 font-medium ${overdue ? "text-overdue" : "text-ink"}`}>{formatDate(task.dueDate) || "Chưa đặt hạn"}</dd>
+              </div>
+              <div>
+                <dt className="flex items-center gap-1.5 text-xs text-muted"><Flag className="h-3.5 w-3.5" /> Mức ưu tiên</dt>
+                <dd className="mt-0.5"><span className={`badge ${PRIORITY_META[task.priority].cls}`}>{PRIORITY_META[task.priority].label}</span></dd>
+              </div>
+              <div>
+                <dt className="flex items-center gap-1.5 text-xs text-muted"><Layers className="h-3.5 w-3.5" /> Ngày tạo</dt>
+                <dd className="mt-0.5 font-medium text-ink">{formatDate(task.createdAt)}</dd>
+              </div>
+              {task.meetingId && (
+                <div className="sm:col-span-2">
+                  <dt className="flex items-center gap-1.5 text-xs text-muted"><FileText className="h-3.5 w-3.5" /> Nguồn</dt>
+                  <dd className="mt-0.5 font-medium text-ink">Trích xuất từ biên bản họp</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+
+          {task.description && (
+            <section>
+              <h3 className="mb-2 text-[13px] font-semibold text-muted">Mô tả</h3>
+              <p className="whitespace-pre-line text-sm leading-relaxed text-ink">{task.description}</p>
+            </section>
+          )}
+
+          <section>
+            <h3 className="mb-3 flex items-center gap-1.5 text-[13px] font-semibold text-muted">
+              <MessageSquare className="h-4 w-4" /> Trao đổi / Báo cáo tiến độ
+              {!loadingComments && <span className="tabular-nums">({comments.length})</span>}
+            </h3>
+            {loadingComments ? (
+              <div className="h-16 animate-pulse rounded-lg bg-slate-100" />
+            ) : comments.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-line px-3 py-4 text-center text-sm text-muted">Chưa có trao đổi nào.</p>
+            ) : (
+              <ul className="space-y-3">
+                {comments.map((c) => (
+                  <li key={c.id} className="flex gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-50 text-xs font-semibold text-red-700">
+                      {(c.userName ?? "?").trim().split(/\s+/).pop()?.[0]?.toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1 rounded-lg bg-background px-3 py-2">
+                      <p className="text-xs font-semibold text-ink">
+                        {c.userName ?? "Người dùng"}
+                        {c.createdAt && <span className="ml-1.5 font-normal text-muted">{new Date(c.createdAt).toLocaleString("vi-VN")}</span>}
+                      </p>
+                      <p className="mt-0.5 whitespace-pre-line text-sm text-ink">{c.content}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        <form onSubmit={submitComment} className="flex gap-2 border-t border-line px-5 py-3">
+          <label htmlFor="td-comment" className="sr-only">Bình luận</label>
           <input
+            id="td-comment"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Nhập báo cáo / bình luận..."
-            className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-red-400 focus:ring-1 focus:ring-red-200"
+            className="field flex-1"
           />
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            type="submit"
-            className="rounded-xl bg-red-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm shadow-red-600/25 hover:bg-red-700"
-          >
-            Gửi
-          </motion.button>
+          <button type="submit" disabled={!content.trim()} className="btn btn-primary" aria-label="Gửi bình luận">
+            <Send className="h-4 w-4" />
+            <span className="hidden sm:inline">Gửi</span>
+          </button>
         </form>
-      </div>
-    </ModalShell>
+      </motion.aside>
+    </>
   );
 }
