@@ -20,12 +20,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - name: Sinh kiểu route của Next.js (LayoutProps, PageProps…)
+        run: npx next typegen
       - name: Kiểm tra kiểu dữ liệu (TypeScript)
         run: npx tsc --noEmit
       - name: Chạy test
