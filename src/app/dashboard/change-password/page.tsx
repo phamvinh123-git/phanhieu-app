@@ -63,10 +63,6 @@ export default function ChangePasswordPage() {
         </span>
         Đổi mật khẩu
       </motion.h1>
-      <p className="mt-1 pl-[52px] text-sm text-muted">
-        Nếu đây là lần đăng nhập đầu tiên bằng mật khẩu khởi tạo chung, bạn nên đổi ngay sang
-        mật khẩu riêng của mình.
-      </p>
 
       <motion.form
         initial={{ opacity: 0, y: 12 }}

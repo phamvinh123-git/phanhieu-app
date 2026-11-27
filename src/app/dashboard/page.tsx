@@ -111,7 +111,6 @@ export default function DashboardHome() {
     <div>
       <PageHeader
         title={`${greeting}, ${me?.user?.fullName ?? ""}`}
-        description="Tổng hợp công việc trong phạm vi bạn được phân quyền."
         actions={
           createHref && (
             <Link href={createHref} className="btn btn-primary">
@@ -123,7 +122,7 @@ export default function DashboardHome() {
 
       {/* KPI */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Tổng công việc" value={loading ? "–" : stats.total} icon={ClipboardList} tone="brand" hint="Trong phạm vi của bạn" />
+        <KpiCard label="Tổng công việc" value={loading ? "–" : stats.total} icon={ClipboardList} tone="brand" />
         <KpiCard label="Đang thực hiện" value={loading ? "–" : stats.inProgress} icon={Loader} tone="progress" hint={`${stats.todo} việc chưa bắt đầu`} />
         <KpiCard label="Sắp đến hạn" value={loading ? "–" : stats.dueSoon} icon={CalendarClock} tone="todo" hint={`Trong 7 ngày tới · ${stats.overdue.length} quá hạn`} />
         <KpiCard
@@ -148,7 +147,7 @@ export default function DashboardHome() {
               ))}
             </div>
           ) : stats.recent.length === 0 ? (
-            <EmptyState icon={Inbox} title="Chưa có công việc nào" hint="Công việc được giao sẽ hiển thị tại đây." />
+            <EmptyState icon={Inbox} title="Chưa có công việc nào" />
           ) : (
             <div className="overflow-x-auto">
               <table className="data-table min-w-[620px] table-fixed">

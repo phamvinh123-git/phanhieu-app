@@ -52,7 +52,7 @@ export function KanbanBoard({
 }: {
   level: Level;
   title: string;
-  description: string;
+  description?: string;
 }) {
   const { me } = useMe();
   const [tasks, setTasks] = useState<Task[]>([]);

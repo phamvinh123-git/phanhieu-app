@@ -56,7 +56,6 @@ export default function AdminUsersPage() {
     <div>
       <PageHeader
         title="Quản lý người dùng"
-        description="Một người có thể được cấp nhiều vai trò cùng lúc (ví dụ vừa là Trưởng phòng A, vừa hỗ trợ phòng B)."
         actions={
           <button onClick={() => setShowCreate(true)} className="btn btn-primary">
             <Plus className="h-4 w-4" /> Cấp tài khoản

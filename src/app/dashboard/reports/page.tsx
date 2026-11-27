@@ -128,7 +128,6 @@ export default function ReportsPage() {
     <div>
       <PageHeader
         title="Báo cáo thống kê"
-        description="Số liệu tính từ dữ liệu thật, chỉ trong phạm vi bạn được phép xem."
       />
 
       {/* Bộ lọc */}
@@ -222,7 +221,7 @@ export default function ReportsPage() {
           {loading ? (
             <div className="h-48 animate-pulse rounded-lg bg-slate-100" />
           ) : stats.months.length === 0 ? (
-            <EmptyState icon={BarChart3} title="Chưa có dữ liệu theo tháng" hint="Các nhiệm vụ có hạn hoàn thành sẽ được thống kê tại đây." />
+            <EmptyState icon={BarChart3} title="Chưa có dữ liệu theo tháng" />
           ) : (
             <div className="flex h-52 items-end gap-3 border-b border-line pb-0">
               {stats.months.map(([m, v]) => (

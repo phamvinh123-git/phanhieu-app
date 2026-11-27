@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, CheckCircle2, LifeBuoy } from "lucide-react";
-
-const HIGHLIGHTS = [
-  "Chuyển kết luận cuộc họp thành nhiệm vụ cho các Phòng",
-  "Theo dõi tiến độ bằng bảng Kanban 3 trạng thái",
-  "Báo cáo tổng hợp theo đơn vị, đúng phạm vi quyền",
-];
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -69,14 +63,6 @@ export default function LoginPage() {
             <br />
             phân công công việc
           </h1>
-          <ul className="mt-8 space-y-3">
-            {HIGHLIGHTS.map((h) => (
-              <li key={h} className="flex items-start gap-2.5 text-[15px] text-white/90">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-white/80" />
-                {h}
-              </li>
-            ))}
-          </ul>
         </div>
 
         <p className="relative text-xs text-white/60">
@@ -99,8 +85,7 @@ export default function LoginPage() {
           </div>
 
           <h2 className="text-2xl font-bold text-ink">Đăng nhập</h2>
-          <p className="mt-1 text-sm text-muted">Sử dụng tài khoản được Phân hiệu cấp để tiếp tục.</p>
-
+          
           <form onSubmit={onSubmit} className="mt-7 space-y-4" noValidate={false}>
             <div>
               <label htmlFor="email" className="field-label">
@@ -154,14 +139,6 @@ export default function LoginPage() {
               {loading ? "Đang đăng nhập..." : "Đăng nhập"}
             </button>
           </form>
-
-          <div className="mt-8 flex items-start gap-2 rounded-lg bg-white p-3 text-xs text-muted ring-1 ring-line">
-            <LifeBuoy className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-            <span>
-              Quên mật khẩu hoặc cần hỗ trợ kỹ thuật? Liên hệ quản trị hệ thống của Phân hiệu để được cấp lại.
-              Sau lần đăng nhập đầu tiên, hãy đổi mật khẩu.
-            </span>
-          </div>
         </div>
       </section>
     </div>

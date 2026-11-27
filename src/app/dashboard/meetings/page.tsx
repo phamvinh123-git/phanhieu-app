@@ -80,7 +80,6 @@ export default function MeetingsPage() {
     <div>
       <PageHeader
         title="Biên bản họp"
-        description="Gõ trực tiếp nội dung biên bản, hệ thống tự trích xuất đầu việc theo mã Phòng đặt trong ngoặc ở cuối mỗi dòng và gửi cho các phòng ngay sau khi họp."
         actions={
           canCreate && (
             <button onClick={() => setShowWizard(true)} className="btn btn-primary">
@@ -131,7 +130,6 @@ export default function MeetingsPage() {
           <EmptyState
             icon={FileText}
             title={meetings.length === 0 ? "Chưa có biên bản họp nào" : "Không có biên bản phù hợp"}
-            hint={meetings.length === 0 && canCreate ? "Bấm “Tạo biên bản” để soạn biên bản và phân việc." : undefined}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -245,13 +243,6 @@ type ExtractedRow = {
 };
 
 type SkippedLine = { line: string; reason: "no_tag" | "unmatched_codes"; unmatchedCodes?: string[] };
-
-const EXAMPLE_TEXT = `1. Rà soát chương trình đào tạo học kỳ mới trước 25/8 (QLDT).
-2. Giao Phòng Tổ chức - Hành chính - Quản trị chủ trì, phối hợp TCKT chuẩn bị quy chế chi tiêu nội bộ, hoàn thành trong tháng 9.
-
-II. Phòng Khảo thí và Đảm bảo Chất lượng giáo dục:
-- Khẩn trương hoàn thiện hồ sơ tự đánh giá, chậm nhất ngày 15/10/2026.
-- Tổ chức thi kết thúc học phần; tổng hợp kết quả thi học kỳ I.`;
 
 const inputCls = "field";
 
@@ -435,18 +426,11 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
             </div>
             <div>
               <label className="field-label">Nội dung biên bản</label>
-              <div className="mb-2 rounded-lg bg-background p-3 text-xs leading-relaxed text-muted">
-                Dán nguyên biên bản vào đây. Hệ thống tự nhận Phòng phụ trách khi: có mã trong ngoặc cuối dòng{" "}
-                <b className="text-ink">(QLDT, TCKT)</b>; câu nhắc tên hoặc mã Phòng (“Giao Phòng Quản lý Đào tạo chủ
-                trì…”, “Phòng TCKT: …”); hoặc các gạch đầu dòng nằm dưới tiêu đề mục của một Phòng. Hạn hoàn thành
-                nhận được: 25/8, 25/08/2026, “ngày 25 tháng 8”, “trong tháng 9”, “trước quý IV”, “tuần sau”. Mã Phòng
-                hiện có: <b className="text-ink">{departments.map((d) => d.code).join(", ") || "..."}</b>
-              </div>
               <textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={12}
-                placeholder={EXAMPLE_TEXT}
+                placeholder="Dán nội dung biên bản họp vào đây"
                 className={`${inputCls} font-mono text-[13px]`}
               />
             </div>
@@ -493,7 +477,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                   {" "}· <b className="text-ink">{rows.filter((r) => r.dueDate).length}</b> có hạn hoàn thành
                 </>
               )}
-              . Kiểm tra lại tiêu đề, Phòng phụ trách và hạn trước khi gửi — có thể sửa hoặc xoá từng dòng.
+.
             </p>
 
             {skipped.length > 0 && (
@@ -539,11 +523,6 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                    <p className="mb-2 text-xs text-muted">
-                      {r.source === "tag" && "Phòng lấy từ mã trong ngoặc"}
-                      {r.source === "mention" && "Phòng lấy từ nội dung câu"}
-                      {r.source === "section" && `Phòng lấy theo mục: ${r.section ?? ""}`}
-                    </p>
                     <div className="mb-2 flex flex-wrap gap-1.5">
                       {departments.map((d) => (
                         <motion.button
@@ -590,7 +569,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                         ? r.autoDue
                           ? `Hạn tự nhận từ biên bản: ${r.dueDate.split("-").reverse().join("/")}`
                           : `Hạn: ${r.dueDate.split("-").reverse().join("/")}`
-                        : "Biên bản không ghi hạn cho việc này — hãy chọn hạn nếu cần."}
+                        : "Chưa có hạn hoàn thành"}
                     </p>
                     <AnimatePresence>
                       {r.departmentIds.length === 0 && (
@@ -614,8 +593,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
               </AnimatePresence>
               {rows.length === 0 && (
                 <p className="rounded-lg bg-background p-4 text-center text-sm text-muted">
-                  Không trích xuất được nhiệm vụ nào. Quay lại và ghi rõ Phòng phụ trách (mã trong ngoặc, tên Phòng
-                  trong câu, hoặc tiêu đề mục theo Phòng).
+                  Không trích xuất được nhiệm vụ nào.
                 </p>
               )}
             </div>
