@@ -156,7 +156,21 @@ export async function runSeed(defaultPassword?: string | null): Promise<SeedResu
   ];
   await db.insert(userRoles).values(roleRows);
 
-  // ---- Biên bản họp + luồng công việc mẫu -------------------------------------
+  // ---- Biên bản họp + luồng công việc mẫu (CHỈ khi bật SEED_DEMO_DATA) -------
+  // Mặc định bỏ qua để hệ thống thật bắt đầu "sạch": chỉ có phòng ban + tài
+  // khoản. Muốn có dữ liệu minh hoạ (dev/demo) thì đặt SEED_DEMO_DATA=true.
+  if (process.env.SEED_DEMO_DATA === "true") {
+    await seedDemoWork({ dept, linh, trang });
+  }
+
+  return { skipped: false, createdUsers: credentials };
+}
+
+type DeptRow = typeof departments.$inferSelect;
+type UserRow = typeof users.$inferSelect;
+
+/** Dữ liệu minh hoạ luồng nghiệp vụ: 1 biên bản họp + vài nhiệm vụ mẫu. */
+async function seedDemoWork({ dept, linh, trang }: { dept: Record<string, DeptRow>; linh: UserRow; trang: UserRow }) {
   const meetingContent = [
     "1. Rà soát chương trình đào tạo và lịch giảng dạy học kỳ mới trước 25/8 (QLDT).",
     "2. Chuẩn bị hồ sơ, quy chế chi tiêu nội bộ phối hợp cung cấp số liệu (TCHCQT, TCKT).",
@@ -230,5 +244,4 @@ export async function runSeed(defaultPassword?: string | null): Promise<SeedResu
     },
   ]);
 
-  return { skipped: false, createdUsers: credentials };
 }
