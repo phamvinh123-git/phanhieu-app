@@ -629,6 +629,71 @@ input[type="radio"] {
   }
 }
 
+/* ---- Hiệu ứng vùng nhận diện trang đăng nhập ---- */
+.login-hero {
+  background:
+    radial-gradient(ellipse at 20% 15%, #b42536 0%, transparent 55%),
+    linear-gradient(160deg, #a51d2d 0%, #941827 45%, #5e0f1a 100%);
+}
+.login-dots {
+  position: absolute;
+  inset: -44px;
+  pointer-events: none;
+  opacity: 0.1;
+  background-image: radial-gradient(circle at 1px 1px, #fff 1px, transparent 0);
+  background-size: 22px 22px;
+  animation: login-dots 24s linear infinite;
+}
+@keyframes login-dots {
+  to {
+    transform: translate(22px, 22px);
+  }
+}
+.login-rays {
+  top: 12%;
+  left: 12%;
+  opacity: 0.12;
+}
+.login-big-logo {
+  position: absolute;
+  right: -18%;
+  bottom: -14%;
+  width: 70%;
+  max-width: 440px;
+  opacity: 0.045;
+  pointer-events: none;
+  filter: grayscale(1) brightness(3);
+  animation: idle-spin 120s linear infinite;
+}
+.login-logo-ring {
+  position: absolute;
+  inset: -7px;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, #fff, rgba(255, 255, 255, 0) 40%, #f8d5d9 60%, rgba(255, 255, 255, 0) 90%, #fff);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+  animation: idle-spin 5s linear infinite;
+}
+.login-logo-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  animation: idle-ripple 3.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+.login-underline {
+  background: linear-gradient(90deg, #fff, rgba(255, 255, 255, 0.2));
+  background-size: 200% 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-dots,
+  .login-big-logo,
+  .login-logo-ring,
+  .login-logo-pulse {
+    animation: none !important;
+  }
+}
+
 /* Thanh cuộn mảnh */
 .thin-scrollbar::-webkit-scrollbar {
   width: 6px;

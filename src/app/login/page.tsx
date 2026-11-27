@@ -3,6 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+
+const HEADLINE = ["Hệ thống quản lý và", "phân công công việc"];
+// Vị trí cố định (không random) để tránh lệch khi render
+const HERO_PARTICLES = Array.from({ length: 12 }, (_, i) => ({
+  left: (i * 37 + 9) % 100,
+  size: 2 + ((i * 7) % 4),
+  delay: (i * 0.9) % 10,
+  duration: 11 + ((i * 5) % 8),
+  drift: ((i % 5) - 2) * 14,
+}));
+const HERO_BOKEH = Array.from({ length: 5 }, (_, i) => ({
+  left: (i * 43 + 5) % 90,
+  top: (i * 31 + 10) % 80,
+  size: 110 + ((i * 41) % 130),
+  delay: -((i * 2.3) % 14),
+  duration: 20 + ((i * 3) % 10),
+}));
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,37 +54,111 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Vùng nhận diện — bên trái (ẩn trên mobile) */}
-      <section className="relative hidden w-[46%] max-w-[640px] flex-col justify-between overflow-hidden bg-[#941827] p-10 text-white lg:flex">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)",
-            backgroundSize: "22px 22px",
-          }}
-        />
+      {/* Vùng nhận diện — bên trái (ẩn trên mobile), có hiệu ứng động */}
+      <section className="login-hero relative hidden w-[46%] max-w-[640px] flex-col justify-between overflow-hidden p-10 text-white lg:flex">
+        <div className="login-dots" />
+        <div className="idle-rays login-rays" />
+        {HERO_BOKEH.map((b, i) => (
+          <span
+            key={`b${i}`}
+            className="idle-bokeh"
+            style={{ left: `${b.left}%`, top: `${b.top}%`, width: b.size, height: b.size, animationDelay: `${b.delay}s`, animationDuration: `${b.duration}s` }}
+          />
+        ))}
+        {HERO_PARTICLES.map((p, i) => (
+          <span
+            key={`p${i}`}
+            className="idle-particle"
+            style={
+              {
+                left: `${p.left}%`,
+                width: p.size,
+                height: p.size,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${p.duration}s`,
+                "--drift": `${p.drift}px`,
+              } as React.CSSProperties
+            }
+          />
+        ))}
+        {/* Logo lớn in chìm, xoay rất chậm */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-phan-hieu.png" alt="" aria-hidden="true" className="login-big-logo" />
+        <svg className="idle-waves" viewBox="0 0 2880 220" preserveAspectRatio="none" aria-hidden="true">
+          <path className="idle-wave idle-wave-1" d="M0,120 C240,60 480,180 720,120 C960,60 1200,180 1440,120 C1680,60 1920,180 2160,120 C2400,60 2640,180 2880,120" />
+          <path className="idle-wave idle-wave-2" d="M0,150 C240,100 480,200 720,150 C960,100 1200,200 1440,150 C1680,100 1920,200 2160,150 C2400,100 2640,200 2880,150" />
+          <path className="idle-wave idle-wave-3" d="M0,180 C240,150 480,210 720,180 C960,150 1200,210 1440,180 C1680,150 1920,210 2160,180 C2400,150 2640,210 2880,180" />
+        </svg>
+
         <div className="relative flex items-center gap-3">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white p-1.5 shadow">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-phan-hieu.png" alt="" className="h-full w-full object-contain" />
-          </span>
+          <motion.span
+            initial={{ scale: 0, rotate: -90, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 140, damping: 13, delay: 0.1 }}
+            className="relative flex h-14 w-14 items-center justify-center"
+          >
+            <span className="login-logo-ring" />
+            <span className="login-logo-pulse" />
+            <span className="idle-logo relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white p-1.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-phan-hieu.png" alt="" className="h-full w-full object-contain" />
+              <span className="idle-shine" aria-hidden="true" />
+            </span>
+          </motion.span>
           <div className="leading-tight">
-            <p className="text-sm text-white/75">Trường Đại học Y Hà Nội</p>
-            <p className="text-base font-semibold">Phân hiệu tại Thanh Hoá</p>
+            <motion.p
+              initial={{ x: -24, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.35, duration: 0.6, ease: "easeOut" }}
+              className="text-sm text-white/75"
+            >
+              Trường Đại học Y Hà Nội
+            </motion.p>
+            <motion.p
+              initial={{ x: -24, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+              className="text-base font-semibold"
+            >
+              Phân hiệu tại Thanh Hoá
+            </motion.p>
           </div>
         </div>
 
         <div className="relative">
-          <h1 className=" text-[32px] font-bold leading-tight">
-            Hệ thống quản lý và
-            <br />
-            phân công công việc
+          <h1 className="text-[32px] font-bold leading-tight">
+            {HEADLINE.map((line, li) => (
+              <span key={li} className="block overflow-hidden pb-1">
+                {line.split(" ").map((w, wi) => (
+                  <motion.span
+                    key={wi}
+                    initial={{ y: "110%", opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.7 + (li * 4 + wi) * 0.08, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                    className="mr-[0.25em] inline-block"
+                  >
+                    {w}
+                  </motion.span>
+                ))}
+              </span>
+            ))}
           </h1>
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 1.5, duration: 0.8, ease: "easeOut" }}
+            className="login-underline mt-4 h-[3px] w-28 origin-left rounded-full"
+          />
         </div>
 
-        <p className="relative text-xs text-white/60">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.8, duration: 0.8 }}
+          className="relative text-xs text-white/60"
+        >
           © {new Date().getFullYear()} Phân hiệu Trường Đại học Y Hà Nội tại Thanh Hoá
-        </p>
+        </motion.p>
       </section>
 
       {/* Form đăng nhập — bên phải */}
