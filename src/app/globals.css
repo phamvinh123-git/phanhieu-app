@@ -342,7 +342,7 @@ input[type="radio"] {
 /* ---- Màn hình chờ khi không thao tác (components/IdleScreen.tsx) ---- */
 .idle-screen {
   background:
-    radial-gradient(ellipse at 50% 40%, #c0303f 0%, #941827 45%, #5c111b 100%);
+    radial-gradient(ellipse at 50% 38%, #b42536 0%, #8a1524 42%, #4a0c15 100%);
 }
 .idle-glow {
   position: absolute;
@@ -382,7 +382,7 @@ input[type="radio"] {
   border-radius: 9999px;
   background: #fff;
   opacity: 0;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
   animation: idle-rise linear infinite;
   pointer-events: none;
 }
@@ -406,8 +406,8 @@ input[type="radio"] {
   position: absolute;
   inset: 18%;
   border-radius: 9999px;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  animation: idle-ripple 3.9s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  animation: idle-ripple 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 @keyframes idle-ripple {
   0% {
@@ -424,9 +424,9 @@ input[type="radio"] {
   inset: 12%;
   border-radius: 9999px;
   background: conic-gradient(from 0deg, #ffffff, #f8d5d9 18%, rgba(255, 255, 255, 0) 35%, #ffffff 55%, #f0aab2 72%, rgba(255, 255, 255, 0) 88%, #ffffff);
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
-  animation: idle-spin 6s linear infinite;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation: idle-spin 12s linear infinite;
   filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.6));
 }
 @keyframes idle-spin {
@@ -437,7 +437,7 @@ input[type="radio"] {
 .idle-orbit {
   position: absolute;
   inset: 4%;
-  animation: idle-spin 14s linear infinite reverse;
+  animation: idle-spin 30s linear infinite reverse;
 }
 .idle-orbit i {
   position: absolute;
@@ -469,7 +469,7 @@ input[type="radio"] {
   box-shadow:
     0 0 0 8px rgba(255, 255, 255, 0.18),
     0 20px 60px rgba(40, 0, 6, 0.45);
-  animation: idle-breathe 4s ease-in-out infinite;
+  animation: idle-breathe 6s ease-in-out infinite;
 }
 @keyframes idle-breathe {
   0%,
@@ -480,8 +480,27 @@ input[type="radio"] {
     transform: scale(1.04);
   }
 }
+.idle-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.85) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: idle-shine 7s ease-in-out infinite;
+  mix-blend-mode: soft-light;
+}
+@keyframes idle-shine {
+  0%,
+  60% {
+    transform: translateX(-120%);
+  }
+  85%,
+  100% {
+    transform: translateX(120%);
+  }
+}
 .idle-hint {
-  animation: idle-blink 2.4s ease-in-out infinite;
+  animation: idle-blink 4s ease-in-out infinite;
 }
 @keyframes idle-blink {
   0%,
@@ -492,7 +511,109 @@ input[type="radio"] {
     opacity: 0.85;
   }
 }
+.idle-lines {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  pointer-events: none;
+}
+.idle-lines span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  transform: translate(-50%, -50%);
+  animation: idle-line 8s ease-in-out infinite;
+}
+@keyframes idle-line {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.03);
+  }
+}
+.idle-rays {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 200vmax;
+  height: 200vmax;
+  margin: -100vmax 0 0 -100vmax;
+  pointer-events: none;
+  opacity: 0.09;
+  background: repeating-conic-gradient(from 0deg, #fff 0deg 1.5deg, transparent 3deg 12deg);
+  filter: blur(6px);
+  -webkit-mask: radial-gradient(circle, rgba(0, 0, 0, 0.9) 3%, transparent 22%);
+  mask: radial-gradient(circle, rgba(0, 0, 0, 0.9) 3%, transparent 22%);
+  animation: idle-spin 140s linear infinite;
+}
+.idle-bokeh {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 70%);
+  filter: blur(18px);
+  animation: idle-float ease-in-out infinite;
+}
+@keyframes idle-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+  33% {
+    transform: translate(40px, -50px) scale(1.12);
+    opacity: 0.55;
+  }
+  66% {
+    transform: translate(-30px, 30px) scale(0.92);
+    opacity: 0.35;
+  }
+}
+.idle-waves {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 200%;
+  height: 16vh;
+  pointer-events: none;
+}
+.idle-wave {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  animation: idle-wave linear infinite;
+}
+.idle-wave-1 {
+  opacity: 0.18;
+  animation-duration: 40s;
+}
+.idle-wave-2 {
+  opacity: 0.12;
+  animation-duration: 30s;
+  animation-direction: reverse;
+}
+.idle-wave-3 {
+  opacity: 0.22;
+  animation-duration: 24s;
+}
+@keyframes idle-wave {
+  to {
+    transform: translateX(-1440px);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
+  .idle-lines span,
+  .idle-shine,
+  .idle-rays,
+  .idle-bokeh,
+  .idle-wave,
   .idle-glow,
   .idle-particle,
   .idle-ripple,
