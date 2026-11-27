@@ -242,7 +242,7 @@ type ExtractedRow = {
   section?: string;
 };
 
-type SkippedLine = { line: string; reason: "no_tag" | "unmatched_codes"; unmatchedCodes?: string[] };
+type SkippedLine = { line: string; reason: "no_tag" | "unmatched_codes" | "report"; unmatchedCodes?: string[] };
 
 const inputCls = "field";
 
@@ -480,22 +480,40 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
 .
             </p>
 
-            {skipped.length > 0 && (
+            {skipped.some((s) => s.reason !== "report") && (
               <div className="rounded-lg border border-[#FDE3BF] bg-[#FFF4E5] p-3 text-xs text-[#B45309]">
                 <p className="mb-1 flex items-center gap-1 font-medium">
-                  <AlertTriangle className="h-3.5 w-3.5" /> {skipped.length} dòng không được nhận diện là nhiệm vụ
+                  <AlertTriangle className="h-3.5 w-3.5" /> {skipped.filter((s) => s.reason !== "report").length} dòng
+                  không xác định được Phòng phụ trách
                 </p>
                 <ul className="list-inside list-disc space-y-0.5">
-                  {skipped.map((s, i) => (
-                    <li key={i}>
-                      {s.line}
-                      {s.reason === "unmatched_codes" && s.unmatchedCodes?.length
-                        ? ` — mã không nhận diện được: ${s.unmatchedCodes.join(", ")}`
-                        : " — không xác định được Phòng phụ trách"}
-                    </li>
-                  ))}
+                  {skipped
+                    .filter((s) => s.reason !== "report")
+                    .map((s, i) => (
+                      <li key={i}>
+                        {s.line}
+                        {s.reason === "unmatched_codes" && s.unmatchedCodes?.length
+                          ? ` — mã không nhận diện được: ${s.unmatchedCodes.join(", ")}`
+                          : ""}
+                      </li>
+                    ))}
                 </ul>
               </div>
+            )}
+
+            {skipped.some((s) => s.reason === "report") && (
+              <details className="rounded-lg border border-line bg-background p-3 text-xs text-muted">
+                <summary className="cursor-pointer font-medium text-ink">
+                  {skipped.filter((s) => s.reason === "report").length} ý báo cáo việc đã thực hiện (không tạo nhiệm vụ)
+                </summary>
+                <ul className="mt-2 list-inside list-disc space-y-0.5">
+                  {skipped
+                    .filter((s) => s.reason === "report")
+                    .map((s, i) => (
+                      <li key={i}>{s.line}</li>
+                    ))}
+                </ul>
+              </details>
             )}
 
             <div className="space-y-3">
@@ -511,10 +529,12 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                     className="rounded-lg border border-line p-3"
                   >
                     <div className="mb-2 flex items-start gap-2">
-                      <input
+                      <textarea
                         value={r.title}
                         onChange={(e) => updateRow(r.key, { title: e.target.value })}
-                        className="field h-9 flex-1"
+                        rows={Math.min(5, Math.max(2, Math.ceil(r.title.length / 70)))}
+                        aria-label="Tên nhiệm vụ"
+                        className="field flex-1 resize-y text-[14px] leading-snug"
                       />
                       <button
                         onClick={() => removeRow(r.key)}

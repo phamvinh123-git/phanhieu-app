@@ -15,6 +15,14 @@
  *        "II. Phòng Tài chính – Kế toán:"
  *        "  - Hoàn thiện báo cáo quyết toán quý III."
  *
+ *   4. Biên bản theo mẫu hành chính của Phân hiệu: chỉ đọc phần sau "NỘI DUNG"
+ *      (bỏ phần Thời gian / Thành phần và phần Thư ký / Nơi nhận); mỗi Phòng là
+ *      một mục đánh số ("1. Phòng Tổ chức - Hành chính - Quản trị"); trong mục,
+ *      "x.2. Chỉ đạo của BGĐ" → mọi gạch đầu dòng là việc; "x.1. … báo cáo tình
+ *      hình hoạt động" → chỉ lấy các ý còn phải làm (sẽ / đang / cần / dự kiến /
+ *      trước ngày…), bỏ các ý đã xong. Gạch đầu dòng cấp 2 ("+") giữ chủ đề của
+ *      dòng "-" phía trên ("Cải tạo, sửa chữa nhà A: Tăng cường bạt chắn bụi").
+ *
  * Ngoài ra:
  *   - Câu dài bị xuống dòng (dán từ Word) được ghép lại thành một đầu việc.
  *   - Một dòng chứa nhiều việc ngăn cách bởi dấu ";" được tách thành nhiều việc.
@@ -46,7 +54,9 @@ export type ExtractedTask = {
 
 export type SkippedLine = {
   line: string;
-  reason: "no_tag" | "unmatched_codes";
+  /** no_tag: không xác định được Phòng; unmatched_codes: mã Phòng lạ;
+   *  report: ý báo cáo việc đã làm (không tạo việc) */
+  reason: "no_tag" | "unmatched_codes" | "report";
   unmatchedCodes?: string[];
 };
 
@@ -132,11 +142,17 @@ function buildMatcher(departments: DepartmentRef[]): DeptMatcher {
     if (acr.length >= 3 && !codeMap.has(acr)) codeMap.set(acr, d);
 
     // Tên: cho phép các dấu "-", "–", "," hoặc khoảng trắng giữa các từ.
-    const corePattern = coreWords.map(escapeRe).join("[\\s\\-–,]+");
+    // "và" trong tên cũng khớp "&" ("Khảo thí & Đảm bảo chất lượng").
+    const corePattern = coreWords.map((w) => (w === "va" ? "(?:va|&)" : escapeRe(w))).join("[\\s\\-–,]*");
     const pattern = type
       ? `${UNIT_TYPE_RE}\\s*${corePattern}` // "Phòng Quản lý Đào tạo", "P. Quản lý Đào tạo"
       : corePattern; // "Liên chi đoàn"
     nameRes.push({ re: new RegExp(`(?<![a-z0-9])${pattern}(?![a-z0-9])`, "g"), dept: d });
+    // Liên chi đoàn thường được ghi là "Đoàn Thanh niên" / "Đoàn TN" / "LCĐ".
+    if (/chi doan/.test(name)) {
+      nameRes.push({ re: /(?<![a-z0-9])doan (?:thanh nien|tn)(?![a-z0-9])/g, dept: d });
+      if (!codeMap.has("LCD")) codeMap.set("LCD", d);
+    }
   }
   return { codeMap, nameRes };
 }
@@ -160,6 +176,7 @@ function findMentions(text: string, m: DeptMatcher): Mention[] {
     if (token.replace(/[-.]/g, "").length < 2) continue;
     const dept = m.codeMap.get(normCode(token));
     if (!dept) continue;
+    if (/\bclb\s*$/.test(folded.slice(0, x.index!))) continue; // "CLB NCKH" là CLB sinh viên
     let start = x.index!;
     // Gộp chữ "Phòng"/"Bộ môn"… đứng ngay trước mã vào cùng một cụm.
     const before = folded.slice(0, start);
@@ -254,7 +271,7 @@ function findDates(folded: string, ref: Date): DateHit[] {
   }
 
   // trong/trước/cuối tháng 9 (/2026 | năm 2026) → ngày cuối tháng
-  for (const x of folded.matchAll(/(?:trong|truoc|cuoi|het|xong trong|hoan thanh trong)\s+thang\s+(\d{1,2})(?:\s*[/-]\s*(\d{4})|\s+nam\s+(\d{4}))?/g)) {
+  for (const x of folded.matchAll(/(?:^|(?:trong|truoc|cuoi|het|xong trong|hoan thanh trong)\s+)thang\s+(\d{1,2})(?:\s*[/-]\s*(\d{4})|\s+nam\s+(\d{4}))?/g)) {
     const mo = Number(x[1]);
     if (mo < 1 || mo > 12) continue;
     let y = Number(x[2] ?? x[3] ?? ref.getUTCFullYear());
@@ -295,7 +312,7 @@ function pickDeadline(hits: DateHit[]): DateHit | null {
 function detectPriority(text: string): TaskPriority {
   const t = text.toLowerCase();
   if (/(khẩn cấp|hỏa tốc|hoả tốc|khẩn(?! trương))/.test(t)) return "urgent";
-  if (/(khẩn trương|gấp|ưu tiên|ngay lập tức|sớm nhất|càng sớm càng tốt)/.test(t)) return "high";
+  if (/(khẩn trương|gấp|ưu tiên|ngay lập tức|sớm nhất|càng sớm càng tốt|đẩy nhanh|dứt điểm)/.test(t)) return "high";
   return "normal";
 }
 
@@ -308,7 +325,7 @@ const BULLET_PREFIX =
 
 /** Dòng thông tin hành chính của biên bản — không bao giờ là đầu việc. */
 const METADATA =
-  /^(thoi gian|dia diem|thanh phan|chu tri|thu ky|nguoi ghi|ghi bien ban|tham du|vang mat|vang|khach moi|noi nhan|ngay hop|so|v\/v|kinh gui|can cu)\b[^:]{0,25}:/;
+  /^(thoi gian|dia diem|thanh phan|chu tri|thu ky|nguoi ghi|ghi bien ban|tham du|vang mat|vang|khach moi|noi nhan|ngay hop|so|v\/v|kinh gui|can cu|luu)\b[^:]{0,25}:/;
 
 /** Các từ "đệm" thường có trong tiêu đề mục Phòng, không phải nội dung việc. */
 const HEADING_FILLER = new Set(
@@ -388,6 +405,69 @@ function cleanTitle(text: string, ms: Mention[]): string {
 const TRAILING_TAG = /\(([^()]{1,120})\)\s*[.;:!?]*\s*$/;
 const TAG_SPLIT = /[,/;&+]+|\s+(?:va|và)\s+/i;
 
+/** Viết thường chữ đầu khi ghép sau "Chủ đề: …", trừ chữ viết tắt (PH, BGĐ, KTX). */
+function lowerFirst(s: string) {
+  return /^\p{Lu}\p{Ll}/u.test(s) ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+}
+
+/** Ý trong phần "báo cáo tình hình" còn phải làm (không phải việc đã xong)? */
+function isPendingWork(text: string, hasFutureDate: boolean): boolean {
+  const t = text.toLowerCase();
+  if (/(diễn ra bình thường|không có vấn đề|không phát sinh)/.test(t)) return false;
+  if (hasFutureDate) return true; // có ngày sau ngày họp → việc sắp làm
+  const future = /(sẽ|đang|dự kiến|đề nghị|đề xuất|cần |cần$|chuẩn bị|tiến hành|tiếp tục|trước ngày|trong tuần|thời gian tới|tìm hiểu|lập kế hoạch|xây dựng kế hoạch|có kế hoạch triển khai)/;
+  if (future.test(t)) return true;
+  if (/(đã |hoàn tất|diễn ra bình thường|không có vấn đề|theo kế hoạch\.?$)/.test(t)) return false;
+  // Câu mở đầu bằng động từ hành động ("Hoàn thiện…", "Phối hợp…") → việc cần làm.
+  return /^(hoàn thiện|hoàn tất|hoàn thành|tiến hành|chuẩn bị|tiếp tục|rà soát|xây dựng|lập|tổ chức|triển khai|phối hợp|tổng hợp|thống kê|hướng dẫn|nghiên cứu|đẩy mạnh|tăng cường|bổ sung|thực hiện|đề xuất|tập trung)\b/.test(
+    t
+  );
+}
+
+type Marker = "dash" | "plus" | "star" | "number" | "none";
+function markerKind(raw: string): Marker {
+  const m = raw.match(BULLET_PREFIX);
+  if (!m) return "none";
+  const k = m[0].trim();
+  if (k.startsWith("+")) return "plus";
+  if (k.startsWith("*")) return "star";
+  if (/^[\d(IVXLCa-zđ]|^(Mục|Điều)/u.test(k)) return "number";
+  return "dash";
+}
+
+/** Phần nội dung của biên bản hành chính: sau dòng "NỘI DUNG", trước phần ký
+ *  ("Cuộc họp kết thúc…", "Thư ký cuộc họp", "Nơi nhận"). */
+function bodyLines(lines: string[]): { lines: string[]; structured: boolean } {
+  const start = lines.findIndex((l) => /^noi dung( cuoc hop| bien ban)?:?$/.test(fold(l).trim()));
+  if (start < 0) return { lines, structured: false };
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((l) => /^(cuoc hop ket thuc|thu ky cuoc hop|noi nhan)/.test(fold(l).trim()));
+  return { lines: end < 0 ? rest : rest.slice(0, end), structured: true };
+}
+
+/** Trong biên bản có gạch đầu dòng: dòng KHÔNG có ký hiệu đầu dòng, không phải
+ *  tiêu đề, đứng sau một gạch đầu dòng là phần viết tiếp của ý đó. */
+function attachContinuations(lines: string[]): string[] {
+  const out: string[] = [];
+  for (const line of lines) {
+    const prev = out[out.length - 1];
+    const kind = markerKind(line);
+    const prevKind = prev === undefined ? "none" : markerKind(prev);
+    if (
+      prev !== undefined &&
+      kind === "none" &&
+      (prevKind === "dash" || prevKind === "plus") &&
+      !/:\s*$/.test(prev) &&
+      !(line === line.toUpperCase() && /\p{Lu}/u.test(line))
+    ) {
+      out[out.length - 1] = `${prev.replace(/[\s.;]+$/, "")}. ${line}`;
+    } else {
+      out.push(line);
+    }
+  }
+  return out;
+}
+
 export function extractTasksFromMinutes(
   content: string,
   departments: DepartmentRef[],
@@ -398,22 +478,40 @@ export function extractTasksFromMinutes(
   const tasks: ExtractedTask[] = [];
   const skipped: SkippedLine[] = [];
 
-  const rawLines = content
+  const allLines = content
     .normalize("NFC")
     .replace(/\r\n?/g, "\n")
     .split("\n")
     .map((l) => l.replace(/\s+/g, " ").trim())
     .filter((l) => l.length > 0);
+  const { lines: body0, structured } = bodyLines(allLines);
+  const lines = attachContinuations(joinWrappedLines(body0));
 
   let section: { title: string; depts: DepartmentRef[] } | null = null;
+  let mode: "any" | "report" | "directive" = "any";
+  let topic: string | null = null; // chủ đề của dòng "-" kết thúc bằng ":" cho các ý "+"
 
-  for (const rawLine of joinWrappedLines(rawLines)) {
+  for (const rawLine of lines) {
+    const kind = markerKind(rawLine);
     const line = rawLine.replace(BULLET_PREFIX, "").trim();
     if (!line) continue;
     const folded = fold(line);
-    const hadBullet = line !== rawLine.trim();
+    const hadBullet = kind !== "none";
 
     if (METADATA.test(folded)) continue;
+    if (kind === "dash" || kind === "number" || kind === "none") topic = null;
+
+    // ---- Mục con: "1.2. Chỉ đạo của BGĐ" / "1.1. Đ/c … báo cáo tình hình hoạt động"
+    if ((kind === "number" || kind === "star" || kind === "none") && wordCount(line) <= 25) {
+      if (/^(y kien )?chi dao\b|\bchi dao cua (bgd|ban giam doc|giam doc)|^ket luan\b/.test(folded) && !/:\s*\S/.test(line)) {
+        mode = "directive";
+        continue;
+      }
+      if (/\bbao cao\b/.test(folded) && /(tinh hinh|d\/c|dong chi)/.test(folded) && !/:\s*\S/.test(line)) {
+        mode = "report";
+        continue;
+      }
+    }
 
     // ---- 1. Mã trong ngoặc ở cuối dòng --------------------------------------
     let body = line;
@@ -424,7 +522,7 @@ export function extractTasksFromMinutes(
       const tokens = tag[1]
         .replace(/\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?/g, " ") // ngày trong ngoặc không phải mã
         .split(TAG_SPLIT)
-        .map((s) => s.trim())
+        .map((x) => x.trim())
         .filter(Boolean);
       const hits = tokens.map((tok) => ({ tok, dept: matcher.codeMap.get(normCode(tok)) ?? findMentions(tok, matcher)[0]?.dept }));
       tagDepts = uniqueDepts(hits.filter((h) => h.dept) as { dept: DepartmentRef }[]);
@@ -437,43 +535,85 @@ export function extractTasksFromMinutes(
     const mentions = findMentions(body, matcher);
     const mentionDepts = uniqueDepts(mentions);
 
-    // ---- 3. Tiêu đề mục ("II. Phòng Tài chính – Kế toán:") ------------------
+    // ---- 3. Tiêu đề mục ("II. Phòng Tài chính – Kế toán:", "5. Đoàn Thanh niên")
     const residue = fold(maskMentions(fold(body), mentions))
       .replace(/\u0001+/g, " ")
       .split(/[^a-z0-9]+/)
       .filter((w) => w && !HEADING_FILLER.has(w));
     const endsWithColon = /:\s*$/.test(body);
     const isAllCaps = body === body.toUpperCase() && /\p{Lu}/u.test(body);
+    const headingMarker = kind === "none" || kind === "number";
     const looksLikeHeading =
       tagDepts.length === 0 &&
-      (endsWithColon || isAllCaps || (!hadBullet && residue.length <= 1 && !/[.;]$/.test(body)));
+      (endsWithColon || isAllCaps || (headingMarker && residue.length <= 1 && !/[.;]$/.test(body)));
 
-    if (looksLikeHeading && mentionDepts.length > 0 && residue.length <= 2) {
+    if (looksLikeHeading && headingMarker && mentionDepts.length > 0 && residue.length <= 2) {
       section = { title: body.replace(/:\s*$/, ""), depts: mentionDepts };
+      mode = "any";
       continue;
     }
-    if (looksLikeHeading && mentionDepts.length === 0 && (endsWithColon || isAllCaps) && wordCount(body) <= 10) {
-      section = null; // tiêu đề mục không gắn Phòng ("III. Các vấn đề khác:") → hết phạm vi mục trước
+    if (looksLikeHeading && !headingMarker && mentionDepts.length > 0 && residue.length <= 2 && !hadBullet) {
+      section = { title: body.replace(/:\s*$/, ""), depts: mentionDepts };
+      mode = "any";
       continue;
+    }
+    // Dòng chủ đề trong một mục ("- Cải tạo, sửa chữa nhà A:", "* Công tác cán bộ")
+    if (hadBullet && kind !== "number" && endsWithColon && wordCount(body) <= 12) {
+      if (kind === "dash") topic = body.replace(/:\s*$/, "").trim();
+      continue;
+    }
+    if (kind === "star" && !/:\s*\S/.test(body) && wordCount(body) <= 12 && mentionDepts.length === 0) {
+      continue; // nhóm ý ("* Công tác đào tạo:")
+    }
+    if (looksLikeHeading && mentionDepts.length === 0 && headingMarker && (endsWithColon || isAllCaps) && wordCount(body) <= 10) {
+      section = null; // tiêu đề mục không gắn Phòng ("III. Các vấn đề khác:") → hết phạm vi mục trước
+      mode = "any";
+      continue;
+    }
+
+    // ---- Phần báo cáo tình hình: chỉ giữ các ý còn phải làm -------------------
+    const futureDate = findDates(folded, ref).some((h) => h.precise && h.date.getTime() > ref.getTime());
+    if (mode === "report" && tagDepts.length === 0 && !isPendingWork(body.replace(/^[^:]{1,80}:\s*/, ""), futureDate)) {
+      skipped.push({ line: rawLine, reason: "report" });
+      continue;
+    }
+
+    // ---- "Chủ đề: nội dung" — phân tích giao việc trên phần nội dung ---------
+    let lead = "";
+    let work = body;
+    let workMentions = mentions;
+    const colon = body.match(/^([^:]{2,90}):\s+(.+)$/);
+    if (colon && tagDepts.length === 0) {
+      const leftMentions = findMentions(colon[1], matcher);
+      if (leftMentions.length === 0 && wordCount(colon[1]) <= 12 && wordCount(colon[2]) >= 2) {
+        lead = colon[1].trim();
+        work = colon[2].trim();
+        workMentions = findMentions(work, matcher);
+      }
     }
 
     // ---- Xác định Phòng phụ trách -------------------------------------------
     let depts: DepartmentRef[];
     let source: ExtractedTask["source"];
-    if (tagDepts.length > 0) {
+    const tagIsCollab = Boolean(tag && /(phoi hop|cung|ho tro)/.test(fold(tag[1])));
+    if (tagDepts.length > 0 && tagIsCollab && section) {
+      // "(phối hợp với Phòng TCHCQT)" trong mục của Phòng khác → Phòng của mục chủ trì.
+      depts = uniqueDepts([...section.depts, ...tagDepts].map((dept) => ({ dept })));
+      source = "section";
+    } else if (tagDepts.length > 0) {
       depts = tagDepts;
       source = "tag";
     } else if (mentionDepts.length > 0) {
       // Trong một mục Phòng, câu chỉ nhắc thêm Phòng phối hợp ("…, phối hợp
       // TCKT") thì vẫn giữ Phòng của mục làm Phòng chủ trì. Nếu câu mở đầu
       // bằng việc giao hẳn cho Phòng khác ("Giao Phòng X …") thì theo câu.
-      const lead = maskMentions(fold(body), mentions).match(LEAD_RE);
-      const assignedAtStart = Boolean(lead && lead[0].includes("\u0001"));
+      const leadMatch = maskMentions(fold(work), workMentions).match(LEAD_RE);
+      const assignedAtStart = Boolean(leadMatch && leadMatch[0].includes("\u0001"));
       if (section && !assignedAtStart) {
         depts = uniqueDepts([...section.depts, ...mentionDepts].map((dept) => ({ dept })));
         source = "section";
       } else {
-        depts = mentionDepts;
+        depts = assignedAtStart ? uniqueDepts(workMentions) : mentionDepts;
         source = "mention";
       }
     } else if (section) {
@@ -490,10 +630,17 @@ export function extractTasksFromMinutes(
       continue;
     }
 
-    // ---- Tách nhiều việc trên cùng một dòng (ngăn bởi ";") -------------------
-    const titleSource = cleanTitle(body, mentions);
-    const parts = titleSource.split(/\s*;\s*/).filter((p) => wordCount(p) >= 3);
-    const pieces = parts.length > 1 ? parts : [titleSource];
+    // ---- Tiêu đề: [chủ đề dòng "-"]: [chủ đề trong câu]: nội dung đã làm sạch --
+    const cleanedWork = cleanTitle(work, workMentions);
+    const prefixParts = [kind === "plus" ? topic : null, lead || null].filter((x): x is string => Boolean(x));
+    const prefix = prefixParts.map((x, i) => (i === 0 ? x : lowerFirst(x))).join(": ");
+    const titleSource = prefix ? `${prefix}: ${lowerFirst(cleanedWork)}` : cleanedWork;
+    if (wordCount(titleSource) < 3) continue;
+
+    // ---- Tách nhiều việc trên cùng một dòng (ngăn bởi ";") — chỉ ở biên bản
+    // viết tự do; biên bản hành chính hay dùng ";" trong cùng một ý.
+    const parts = structured ? [] : cleanedWork.split(/\s*;\s*/).filter((p) => wordCount(p) >= 3);
+    const pieces = parts.length > 1 ? parts.map((p) => (prefix ? `${prefix}: ${p}` : p)) : [titleSource];
     const lineDeadline = pickDeadline(findDates(fold(line), ref));
 
     for (const piece of pieces) {
@@ -503,7 +650,7 @@ export function extractTasksFromMinutes(
       const due = own ?? lineDeadline;
       tasks.push({
         line: rawLine,
-        title,
+        title: title.charAt(0).toUpperCase() + title.slice(1),
         departmentIds: depts.map((d) => d.id),
         departmentCodes: depts.map((d) => d.code),
         dueDate: due ? ymd(due.date) : null,

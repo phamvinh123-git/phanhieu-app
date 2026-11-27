@@ -165,3 +165,58 @@ test("mọi việc có ghi hạn đều được điền hạn, cụm hạn vẫ
   assert.deepEqual(due, ["2026-09-30", "2026-10-15", "2026-11-30", "2026-12-05", null]);
   assert.match(run(text).tasks[0].title, /trước 30\/9$/);
 });
+
+test("biên bản theo mẫu hành chính: chỉ đọc phần NỘI DUNG, mục con báo cáo / chỉ đạo, gạch đầu dòng 2 cấp", () => {
+  const text = [
+    "TRƯỜNG ĐẠI HỌC Y HÀ NỘI",
+    "BIÊN BẢN",
+    "Thời gian: Từ 8h00 ngày 10/08/2026",
+    "Thành phần tham dự",
+    "- ThS. Nguyễn Văn A - Trưởng Phòng TC-HC-QT;",
+    "- ThS. Trần Thị B - Trưởng Phòng TCKT;",
+    "NỘI DUNG",
+    "1. Phòng Tổ chức - Hành chính - Quản trị",
+    "1.1. Đ/c Nguyễn Văn A - Trưởng phòng báo cáo tình hình hoạt động",
+    "* Công tác cơ sở vật chất",
+    "- Phòng đã hoàn tất sơn sửa hội trường.",
+    "- Sửa chữa cổng chính: Nhà thầu sẽ hoàn thành trước ngày 20/08/2026.",
+    "- Cơ sở vật chất:",
+    "+ Phối hợp với Phòng TCKT thống nhất phương án thuê dịch vụ vệ sinh.",
+    "1.2. Chỉ đạo của BGĐ",
+    "- Cải tạo nhà A:",
+    "+ Đảm bảo tiến độ và an toàn thi công.",
+    "+ Tăng cường bạt chắn bụi.",
+    "- Khu đất mới: Yêu cầu đẩy nhanh tiến độ, hoàn thiện dứt điểm trong tháng 9/2026.",
+    "2. Phòng Khảo thí & Đảm bảo chất lượng giáo dục",
+    "2.1. Đ/c Lê Thị C - Trưởng Phòng báo cáo tình hình hoạt động",
+    "- Các hoạt động của Phòng diễn ra bình thường.",
+    "2.2. Chỉ đạo của BGĐ",
+    "- Hoàn thiện cơ cấu nhân sự (phối hợp với Phòng TCHCQT).",
+    "3. Đoàn Thanh niên",
+    "3.1. Chỉ đạo của BGĐ",
+    "- Hoàn trả học phí cho sinh viên: Giao Phòng QLĐT trao đổi với phụ huynh để tìm hiểu nguyên nhân.",
+    "- Bổ sung các CLB thể thao cho sinh viên.",
+    "Giao đ/c phụ trách thể thao theo dõi hoạt động này.",
+    "Cuộc họp kết thúc vào 10 giờ cùng ngày./.",
+    "Nơi nhận:",
+    "- Lưu: VT, TCHCQT.",
+  ].join("\n");
+  const { tasks, skipped } = run(text);
+  const rows = tasks.map((t) => `${t.departmentCodes.join("+")} | ${t.dueDate ?? "-"} | ${t.title}`);
+  assert.deepEqual(rows, [
+    "TCHCQT | 2026-08-20 | Sửa chữa cổng chính: nhà thầu sẽ hoàn thành trước ngày 20/08/2026",
+    "TCHCQT+TCKT | - | Cơ sở vật chất: phối hợp với Phòng TCKT thống nhất phương án thuê dịch vụ vệ sinh",
+    "TCHCQT | - | Cải tạo nhà A: đảm bảo tiến độ và an toàn thi công",
+    "TCHCQT | - | Cải tạo nhà A: tăng cường bạt chắn bụi",
+    "TCHCQT | 2026-09-30 | Khu đất mới: yêu cầu đẩy nhanh tiến độ, hoàn thiện dứt điểm trong tháng 9/2026",
+    "KTDBCL+TCHCQT | - | Hoàn thiện cơ cấu nhân sự",
+    "QLDT | - | Hoàn trả học phí cho sinh viên: trao đổi với phụ huynh để tìm hiểu nguyên nhân",
+    "LCD | - | Bổ sung các CLB thể thao cho sinh viên. Giao đ/c phụ trách thể thao theo dõi hoạt động này",
+  ]);
+  assert.equal(tasks[4].priority, "high");
+  // Ý báo cáo đã xong không tạo việc, được đánh dấu "report"
+  assert.deepEqual(
+    skipped.map((s) => s.reason),
+    ["report", "report"]
+  );
+});
