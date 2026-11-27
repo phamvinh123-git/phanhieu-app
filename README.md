@@ -183,6 +183,10 @@ sudo bash vps-setup.sh
   `/opt/phanhieu-app/.env`), mỗi người tự đổi sau lần đăng nhập đầu.
 - **Cập nhật code mới**: chạy lại `sudo bash /opt/phanhieu-app/deploy/vps-setup.sh` — dữ liệu
   giữ nguyên, `.env` không bị ghi đè.
+- **Tự động deploy**: mỗi lần có code mới trên nhánh `main`, GitHub Actions
+  (`.github/workflows/deploy.yml`) chạy TypeScript + test rồi SSH vào VPS chạy lại
+  script trên. Cần secret `VPS_HOST`, `VPS_SSH_KEY`; khoá deploy trên VPS được giới hạn
+  chỉ chạy lệnh deploy (`command="..."` trong `/root/.ssh/authorized_keys`).
 - Log: `pm2 logs phanhieu-app` · Sao lưu: `sudo -u postgres pg_dump -Fc phanhieu > phanhieu.dump`.
 
 ## Deploy lên Render
