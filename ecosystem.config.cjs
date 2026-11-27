@@ -24,6 +24,7 @@ module.exports = {
       script: "node_modules/next/dist/bin/next",
       args: `start -H 0.0.0.0 -p ${env.APP_PORT || 3000}`,
       env: { ...env, NODE_ENV: "production" },
+      exec_mode: "fork", // tiến trình next-server giữ cổng trực tiếp (như các app khác trên VPS)
       instances: 1,
       autorestart: true,
       max_memory_restart: "700M",

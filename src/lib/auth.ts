@@ -38,7 +38,9 @@ export async function setSessionCookie(token: string) {
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // Chỉ đánh dấu "secure" khi app chạy qua HTTPS (APP_URL https://…). Nếu bật
+    // secure trên địa chỉ http://IP:cổng thì trình duyệt bỏ cookie → không đăng nhập được.
+    secure: (process.env.APP_URL ?? "").startsWith("https://"),
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
