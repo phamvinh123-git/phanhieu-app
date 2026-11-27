@@ -168,7 +168,7 @@ export function KanbanBoard({
   const filteredTasks = useMemo(() => {
     const q = query.trim().toLowerCase();
     return tasks.filter((t) => {
-      if (q && !t.title.toLowerCase().includes(q) && !`#${t.id}`.includes(q)) return false;
+      if (q && !t.title.toLowerCase().includes(q)) return false;
       if (quick && !matchesQuick(t, quick)) return false;
       if (priorityFilter && t.priority !== priorityFilter) return false;
       if (deptFilter) {
@@ -254,7 +254,7 @@ export function KanbanBoard({
               id="kb-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Tên hoặc mã công việc"
+              placeholder="Tên công việc"
               className="field pl-9"
             />
           </div>
@@ -432,7 +432,6 @@ export function KanbanBoard({
                               {t.status === "done" && <Check className="h-3 w-3 animate-check-pop" strokeWidth={3} />}
                             </button>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-medium tabular-nums text-muted">#{t.id}</p>
                               <p
                                 className={`text-[15px] font-semibold leading-snug ${
                                   t.status === "done" ? "text-slate-400 line-through" : "text-ink"
@@ -716,10 +715,7 @@ function TaskDetailDrawer({
       >
         <div className="flex items-start gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium tabular-nums text-muted">
-              #{task.id} · {task.level === "branch" ? "Nhiệm vụ cấp Phân hiệu" : "Nhiệm vụ cấp Phòng"}
-            </p>
-            <h2 className="mt-0.5 text-lg font-semibold leading-snug text-ink">{task.title}</h2>
+            <h2 className="text-lg font-semibold leading-snug text-ink">{task.title}</h2>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <StatusBadge status={task.status} />
               {overdue && <span className="badge badge-overdue">Quá hạn</span>}

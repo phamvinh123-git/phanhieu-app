@@ -166,7 +166,6 @@ export default function DashboardHome() {
                         <Link href={LEVEL_PAGE[t.level]} className="block truncate font-medium text-ink hover:text-red-700">
                           {t.title}
                         </Link>
-                        <span className="text-xs text-muted">#{t.id} · {t.level === "branch" ? "Cấp Phân hiệu" : "Cấp Phòng"}</span>
                       </td>
                       <td className="truncate text-muted">{deptLabel(t) || "—"}</td>
                       <td className={`tabular-nums ${isOverdue(t) ? "font-medium text-overdue" : "text-muted"}`}>

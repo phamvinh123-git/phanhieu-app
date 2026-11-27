@@ -304,7 +304,6 @@ export default function ReportsPage() {
                   <tr key={t.id}>
                     <td className="max-w-[360px]">
                       <p className="truncate font-medium text-ink">{t.title}</p>
-                      <p className="text-xs text-muted">#{t.id} · {LEVEL_LABEL[t.level]}</p>
                     </td>
                     <td className="text-muted">{deptName(t) || "—"}</td>
                     <td className="tabular-nums text-muted">{formatDate(t.dueDate)}</td>
