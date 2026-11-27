@@ -8,6 +8,8 @@ import {
   timestamp,
   integer,
   uuid,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -158,6 +160,39 @@ export const taskStatusHistory = pgTable("task_status_history", {
   changedBy: uuid("changed_by").references(() => users.id),
   changedAt: timestamp("changed_at").defaultNow().notNull(),
 });
+
+// ---------------------------------------------------------------------------
+// Thông báo trong app (chuông ở thanh trên cùng)
+// ---------------------------------------------------------------------------
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "comment", // có trao đổi / bình luận mới ở nhiệm vụ liên quan
+  "assigned", // nhiệm vụ mới được giao cho Phòng
+  "due_soon", // còn ≤ 3 ngày đến hạn
+  "overdue", // đã quá hạn
+]);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    type: notificationTypeEnum("type").notNull(),
+    taskId: integer("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    message: text("message").notNull(),
+    // Khoá chống trùng (vd. "due:12:2026-09-07" — mỗi nhiệm vụ nhắc 1 lần/ngày)
+    dedupeKey: varchar("dedupe_key", { length: 120 }),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("notifications_user_dedupe_idx").on(t.userId, t.dedupeKey),
+    index("notifications_user_created_idx").on(t.userId, t.createdAt),
+  ]
+);
 
 // ---------------------------------------------------------------------------
 // Relations (giúp query bằng drizzle relational API)

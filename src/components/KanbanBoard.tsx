@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, X, Clock, MessageSquare, Building2, Check, Inbox, Search, CalendarDays, FileText, Flag, Layers, Send, SlidersHorizontal } from "lucide-react";
 import { useMe } from "./MeProvider";
@@ -45,6 +46,23 @@ const MODULE_BY_LEVEL: Record<Level, ModuleCode> = {
   department: "department_tasks",
 };
 
+type QuickFilter = "" | "todo" | "in_progress" | "done" | "overdue" | "joint";
+
+const QUICK_FILTERS: { key: QuickFilter; label: string; color: string }[] = [
+  { key: "", label: "Tất cả", color: "#B51F2E" },
+  { key: "todo", label: "Cần làm", color: STATUS_META.todo.color },
+  { key: "in_progress", label: "Đang thực hiện", color: STATUS_META.in_progress.color },
+  { key: "done", label: "Hoàn thành", color: STATUS_META.done.color },
+  { key: "overdue", label: "Quá hạn", color: "#DC3545" },
+  { key: "joint", label: "Liên phòng", color: "#7C3AED" },
+];
+
+function matchesQuick(t: Task, f: Exclude<QuickFilter, "">) {
+  if (f === "overdue") return isOverdue(t);
+  if (f === "joint") return (t.departments?.length ?? 0) > 1;
+  return t.status === f;
+}
+
 export function KanbanBoard({
   level,
   title,
@@ -72,6 +90,19 @@ export function KanbanBoard({
   const [priorityFilter, setPriorityFilter] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [quick, setQuick] = useState<QuickFilter>("");
+
+  // Mở thẳng một nhiệm vụ khi đến từ thông báo: /dashboard/...?task=ID
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const paramTaskId = Number(searchParams.get("task")) || null;
+  const paramTask = paramTaskId ? tasks.find((t) => t.id === paramTaskId) ?? null : null;
+  const shownTask = activeTask ?? paramTask;
+  function closeTask() {
+    setActiveTask(null);
+    if (paramTaskId) router.replace(pathname, { scroll: false });
+  }
 
   const moduleCode = MODULE_BY_LEVEL[level];
   const myRoleCodes = useMemo(() => (me?.roles.map((r) => r.role) ?? []) as RoleCode[], [me]);
@@ -138,6 +169,7 @@ export function KanbanBoard({
     const q = query.trim().toLowerCase();
     return tasks.filter((t) => {
       if (q && !t.title.toLowerCase().includes(q) && !`#${t.id}`.includes(q)) return false;
+      if (quick && !matchesQuick(t, quick)) return false;
       if (priorityFilter && t.priority !== priorityFilter) return false;
       if (deptFilter) {
         const ids = level === "department" ? [t.departmentId] : (t.departments ?? []).map((d) => d.id);
@@ -152,11 +184,12 @@ export function KanbanBoard({
       }
       return true;
     });
-  }, [tasks, query, priorityFilter, deptFilter, level, fromDate, toDate, includeNoDue, dateFilterActive, meetingFilterActive, selectedMeetingId]);
+  }, [tasks, query, quick, priorityFilter, deptFilter, level, fromDate, toDate, includeNoDue, dateFilterActive, meetingFilterActive, selectedMeetingId]);
 
-  const anyFilter = Boolean(query || priorityFilter || deptFilter || dateFilterActive || meetingFilterActive);
+  const anyFilter = Boolean(query || quick || priorityFilter || deptFilter || dateFilterActive || meetingFilterActive);
 
   function clearFilters() {
+    setQuick("");
     setQuery("");
     setPriorityFilter("");
     setDeptFilter("");
@@ -187,6 +220,32 @@ export function KanbanBoard({
 
       {/* Bộ lọc */}
       <div className="todo-card mb-5 p-4">
+        <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Lọc nhanh">
+          {QUICK_FILTERS.filter((f) => f.key !== "joint" || level === "branch").map((f) => {
+            const active = quick === f.key;
+            const count = f.key ? tasks.filter((t) => matchesQuick(t, f.key as Exclude<QuickFilter, "">)).length : tasks.length;
+            return (
+              <button
+                key={f.key || "all"}
+                type="button"
+                onClick={() => setQuick(f.key)}
+                aria-pressed={active}
+                className={`inline-flex h-9 items-center gap-2 rounded-full border px-3.5 text-[13px] font-medium transition-colors ${
+                  active ? "border-transparent text-white" : "border-line bg-white text-ink hover:bg-slate-50"
+                }`}
+                style={active ? { background: f.color } : undefined}
+              >
+                {!active && f.key && <span className="h-2 w-2 rounded-full" style={{ background: f.color }} />}
+                {f.label}
+                <span
+                  className={`rounded-full px-1.5 text-xs tabular-nums ${active ? "bg-white/25 text-white" : "bg-slate-100 text-muted"}`}
+                >
+                  {loading ? "…" : count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
         <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 ${level === "branch" && meetings.length > 0 ? "xl:grid-cols-6" : "xl:grid-cols-5"}`}>
           <div className="relative sm:col-span-2 lg:col-span-1">
             <label htmlFor="kb-search" className="field-label">Tìm kiếm</label>
@@ -438,12 +497,13 @@ export function KanbanBoard({
       </AnimatePresence>
 
       <AnimatePresence>
-        {activeTask && (
+        {shownTask && (
           <TaskDetailDrawer
-            task={tasks.find((t) => t.id === activeTask.id) ?? activeTask}
+            key={shownTask.id}
+            task={tasks.find((t) => t.id === shownTask.id) ?? shownTask}
             deptName={deptName}
-            onClose={() => setActiveTask(null)}
-            onChangeStatus={(status) => updateStatus(activeTask.id, status)}
+            onClose={closeTask}
+            onChangeStatus={(status) => updateStatus(shownTask.id, status)}
           />
         )}
       </AnimatePresence>

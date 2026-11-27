@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useMe } from "../MeProvider";
 import { SplashScreen } from "../SplashScreen";
+import { NotificationBell } from "./NotificationBell";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
@@ -207,6 +208,8 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
           <CalendarDays className="h-4 w-4" />
           {today}
         </span>
+
+        <NotificationBell />
 
         <div ref={menuRef} className="relative">
           <button

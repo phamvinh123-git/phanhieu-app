@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Không có quyền" }, { status: 401 });
   }
 
-  const daysAhead = Number(req.nextUrl.searchParams.get("days") ?? 2);
+  const daysAhead = Number(req.nextUrl.searchParams.get("days") ?? 3);
   const now = new Date();
   const until = new Date(now.getTime() + daysAhead * 24 * 60 * 60 * 1000);
 

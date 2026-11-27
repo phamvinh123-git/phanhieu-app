@@ -5,6 +5,7 @@ import { eq, asc } from "drizzle-orm";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { resolveScope, type ScopeFilter } from "@/lib/permissions";
 import type { ModuleCode } from "@/lib/rbac-config";
+import { notifyComment } from "@/lib/notifications";
 
 const LEVEL_MODULE: Record<string, ModuleCode> = {
   branch: "branch_tasks",
@@ -66,6 +67,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .insert(taskComments)
     .values({ taskId: Number(id), userId: session.userId, content: body.content.toString().trim() })
     .returning();
+
+  await notifyComment(Number(id), session, row.content);
 
   return NextResponse.json({ comment: row }, { status: 201 });
 }

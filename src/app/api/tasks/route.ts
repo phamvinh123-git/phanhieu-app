@@ -5,6 +5,7 @@ import { and, eq, inArray, desc } from "drizzle-orm";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction, resolveScope } from "@/lib/permissions";
 import type { ModuleCode } from "@/lib/rbac-config";
+import { notifyAssigned } from "@/lib/notifications";
 
 const LEVEL_MODULE: Record<string, ModuleCode> = {
   branch: "branch_tasks",
@@ -121,6 +122,7 @@ export async function POST(req: NextRequest) {
       return row;
     });
 
+    await notifyAssigned([result.id], session);
     const [withDepts] = await attachDepartments([result]);
     return NextResponse.json({ task: withDepts }, { status: 201 });
   }
@@ -133,5 +135,6 @@ export async function POST(req: NextRequest) {
   }
 
   const [row] = await db.insert(tasks).values({ ...common, departmentId }).returning();
+  await notifyAssigned([row.id], session);
   return NextResponse.json({ task: row }, { status: 201 });
 }

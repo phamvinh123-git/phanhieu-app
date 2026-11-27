@@ -4,6 +4,7 @@ import { departments, meetings, tasks, taskDepartments } from "@/db/schema";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { notifyBranchTasksAssigned } from "@/lib/email";
+import { notifyAssigned } from "@/lib/notifications";
 
 type IncomingTask = {
   title: string;
@@ -88,6 +89,11 @@ export async function POST(req: NextRequest) {
       dueDate: t.dueDate,
       departmentIds: t.departmentIds,
     }))
+  );
+
+  await notifyAssigned(
+    result.tasks.map((t) => t.id),
+    session
   );
 
   return NextResponse.json(result, { status: 201 });
