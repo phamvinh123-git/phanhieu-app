@@ -3,6 +3,7 @@ import { and, eq, gte, isNotNull, lte, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { tasks, taskDepartments } from "@/db/schema";
 import { notifyDueSoon } from "@/lib/email";
+import { lockExpiredAccounts } from "@/lib/role-expiry";
 
 /**
  * Endpoint để một scheduler BÊN NGOÀI (vd. Render Cron Job, hoặc cron trên
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   await notifyDueSoon(items);
+  const locked = await lockExpiredAccounts();
 
-  return NextResponse.json({ checked: dueSoonTasks.length, notified: items.length });
+  return NextResponse.json({ checked: dueSoonTasks.length, notified: items.length, lockedExpiredAccounts: locked });
 }

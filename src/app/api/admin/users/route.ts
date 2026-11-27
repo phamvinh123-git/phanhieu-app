@@ -5,12 +5,15 @@ import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { hashPassword } from "@/lib/auth";
 import { ROLE_CODES, ROLE_SCOPE } from "@/lib/rbac-config";
+import { lockExpiredAccounts, parseExpiry } from "@/lib/role-expiry";
 
 export async function GET() {
   const session = await requireSession();
   if (!isSession(session)) return session;
   if (!hasAction(session, "users", "view")) return jsonError("Không có quyền", 403);
 
+  // Cập nhật trạng thái các tài khoản đã hết thời hạn giữ quyền trước khi hiển thị
+  await lockExpiredAccounts();
   const allUsers = await db.select().from(users);
   const allRoles = await db.select().from(userRoles);
   const roleByUser = new Map<string, typeof allRoles>();
@@ -46,6 +49,11 @@ export async function POST(req: NextRequest) {
     if (!ROLE_CODES.includes(ra.role)) return jsonError(`Vai trò không hợp lệ: ${ra.role}`);
     const scopeKind = ROLE_SCOPE[ra.role as (typeof ROLE_CODES)[number]];
     if (scopeKind === "department" && !ra.departmentId) return jsonError(`Vai trò ${ra.role} cần chọn phòng ban`);
+    try {
+      ra.expiresAt = parseExpiry(ra.expiresAt);
+    } catch (e) {
+      return jsonError((e as Error).message);
+    }
   }
 
   const passwordHash = await hashPassword(String(body.password));
@@ -60,10 +68,12 @@ export async function POST(req: NextRequest) {
     .returning();
 
   await db.insert(userRoles).values(
-    roleAssignments.map((ra: { role: string; departmentId?: number }) => ({
+    roleAssignments.map((ra: { role: string; departmentId?: number; acting?: boolean; expiresAt: Date | null }) => ({
       userId: user.id,
       role: ra.role as (typeof ROLE_CODES)[number],
       departmentId: ra.departmentId ?? null,
+      acting: Boolean(ra.acting),
+      expiresAt: ra.expiresAt,
     }))
   );
 

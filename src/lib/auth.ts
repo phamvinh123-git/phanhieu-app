@@ -1,9 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users, userRoles } from "@/db/schema";
+import { lockExpiredAccounts, roleIsActive } from "./role-expiry";
 import type { RoleCode } from "./rbac-config";
 
 const SESSION_COOKIE = "phanhieu_session";
@@ -12,6 +13,8 @@ const secret = () => new TextEncoder().encode(process.env.JWT_SECRET!);
 export type SessionRole = {
   role: RoleCode;
   departmentId: number | null;
+  acting?: boolean;
+  expiresAt?: Date | null;
 };
 
 export type SessionPayload = {
@@ -71,10 +74,19 @@ export async function getSession(): Promise<SessionPayload | null> {
       .where(eq(users.id, session.userId));
     if (!user || !user.isActive) return null;
     const roles = await db
-      .select({ role: userRoles.role, departmentId: userRoles.departmentId })
+      .select({
+        role: userRoles.role,
+        departmentId: userRoles.departmentId,
+        acting: userRoles.acting,
+        expiresAt: userRoles.expiresAt,
+      })
       .from(userRoles)
-      .where(eq(userRoles.userId, session.userId));
-    if (roles.length === 0) return null;
+      .where(and(eq(userRoles.userId, session.userId), roleIsActive()));
+    if (roles.length === 0) {
+      // Hết thời hạn mọi vai trò ("Quyền …") → tự tạm khoá tài khoản
+      await lockExpiredAccounts(session.userId);
+      return null;
+    }
     return { userId: session.userId, fullName: user.fullName, email: user.email, roles };
   } catch {
     return null;

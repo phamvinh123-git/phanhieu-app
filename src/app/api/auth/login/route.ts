@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, userRoles } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { lockExpiredAccounts, roleIsActive } from "@/lib/role-expiry";
 import { createSessionToken, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { jsonError } from "@/lib/api-helpers";
 
@@ -13,14 +14,25 @@ export async function POST(req: NextRequest) {
 
   // So khớp email không phân biệt hoa/thường (dữ liệu cũ có thể lưu "Admin@…").
   const [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email}`);
-  if (!user || !user.isActive) return jsonError("Sai email hoặc mật khẩu", 401);
+  if (!user) return jsonError("Sai email hoặc mật khẩu", 401);
 
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) return jsonError("Sai email hoặc mật khẩu", 401);
 
-  const roles = await db.select().from(userRoles).where(eq(userRoles.userId, user.id));
-  if (roles.length === 0) {
-    return jsonError("Tài khoản chưa được gán vai trò nào. Liên hệ quản trị viên.", 403);
+  // Chỉ báo lý do khoá khi đã nhập đúng mật khẩu (không lộ thông tin cho người lạ).
+  const roles = await db.select().from(userRoles).where(and(eq(userRoles.userId, user.id), roleIsActive()));
+  if (user.isActive && roles.length === 0) await lockExpiredAccounts(user.id);
+  if (!user.isActive || roles.length === 0) {
+    const allRoles = await db.select().from(userRoles).where(eq(userRoles.userId, user.id));
+    const expired = allRoles.length > 0 && roles.length === 0;
+    return jsonError(
+      expired
+        ? "Thời hạn giữ quyền đã kết thúc, tài khoản đã được tạm khoá. Liên hệ quản trị viên."
+        : allRoles.length === 0
+          ? "Tài khoản chưa được gán vai trò nào. Liên hệ quản trị viên."
+          : "Tài khoản đang tạm khoá. Liên hệ quản trị viên.",
+      403
+    );
   }
 
   const token = await createSessionToken({

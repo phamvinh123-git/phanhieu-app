@@ -21,6 +21,13 @@ export const ROLE_LABELS: Record<RoleCode, string> = {
   truong_phong: "Trưởng phòng",
 };
 
+/** Nhãn vai trò, có tiền tố "Quyền" khi giữ quyền tạm thời. */
+export function roleLabel(role: RoleCode, acting?: boolean | null): string {
+  if (!acting) return ROLE_LABELS[role];
+  if (role === "bgd") return "Quyền Giám đốc";
+  return `Quyền ${ROLE_LABELS[role]}`;
+}
+
 // Vai trò có gắn phạm vi (scope) theo phòng hay không.
 export const ROLE_SCOPE: Record<RoleCode, "none" | "department"> = {
   admin: "none",

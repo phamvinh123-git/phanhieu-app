@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { notifications, taskDepartments, tasks, userRoles, users } from "@/db/schema";
 import type { SessionPayload } from "./auth";
 import { DEPARTMENT_KANBAN_ENABLED } from "./rbac-config";
+import { roleIsActive } from "./role-expiry";
 
 /**
  * Thông báo trong app. Người nhận một thông báo về nhiệm vụ là: mọi tài khoản
@@ -31,7 +32,7 @@ async function recipientsForTask(task: TaskRow, excludeUserId?: string): Promise
       .select({ userId: userRoles.userId })
       .from(userRoles)
       .innerJoin(users, eq(users.id, userRoles.userId))
-      .where(and(inArray(userRoles.departmentId, deptIds), eq(users.isActive, true)));
+      .where(and(inArray(userRoles.departmentId, deptIds), eq(users.isActive, true), roleIsActive()));
     rows.forEach((r) => ids.add(r.userId));
   }
   if (task.createdBy) ids.add(task.createdBy);

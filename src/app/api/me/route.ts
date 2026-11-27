@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/db";
 import { departments } from "@/db/schema";
-import { ROLE_LABELS, ROLE_NAV_ITEMS, type NavItem } from "@/lib/rbac-config";
+import { ROLE_NAV_ITEMS, roleLabel, type NavItem } from "@/lib/rbac-config";
 import { inArray } from "drizzle-orm";
 
 export async function GET() {
@@ -14,7 +14,8 @@ export async function GET() {
 
   const roles = session.roles.map((r) => ({
     role: r.role,
-    label: ROLE_LABELS[r.role],
+    label: roleLabel(r.role, r.acting),
+    expiresAt: r.expiresAt ? new Date(r.expiresAt).toISOString().slice(0, 10) : null,
     departmentId: r.departmentId,
     departmentName: r.departmentId ? depts.find((d) => d.id === r.departmentId)?.name ?? null : null,
     departmentCode: r.departmentId ? depts.find((d) => d.id === r.departmentId)?.code ?? null : null,

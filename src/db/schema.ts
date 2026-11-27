@@ -78,6 +78,11 @@ export const userRoles = pgTable("user_roles", {
   departmentId: integer("department_id").references(() => departments.id, {
     onDelete: "cascade",
   }),
+  // "Quyền" (giữ quyền tạm thời, vd. Quyền Trưởng phòng)
+  acting: boolean("acting").default(false).notNull(),
+  // Hiệu lực đến hết ngày này (null = không thời hạn). Hết hạn → vai trò mất tác
+  // dụng; nếu người đó không còn vai trò nào khác thì tài khoản tự bị tạm khoá.
+  expiresAt: timestamp("expires_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

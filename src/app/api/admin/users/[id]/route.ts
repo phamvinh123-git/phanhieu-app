@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction } from "@/lib/permissions";
 import { ROLE_CODES, ROLE_SCOPE } from "@/lib/rbac-config";
+import { parseExpiry, todayVN } from "@/lib/role-expiry";
 
 /**
  * Admin sửa phân quyền của một tài khoản đã có: thay TOÀN BỘ danh sách vai
@@ -34,6 +35,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (scopeKind === "department" && !ra.departmentId) {
         return jsonError(`Vai trò ${ra.role} cần chọn phòng ban`);
       }
+      try {
+        ra.expiresAt = parseExpiry(ra.expiresAt);
+      } catch (e) {
+        return jsonError((e as Error).message);
+      }
+    }
+  }
+
+  // Mở khoá: phải còn ít nhất 1 vai trò hiệu lực (chưa hết thời hạn)
+  if (body?.isActive === true) {
+    const today = new Date(`${todayVN()}T00:00:00Z`);
+    const list: { expiresAt: Date | null }[] =
+      roleAssignments ?? (await db.select().from(userRoles).where(eq(userRoles.userId, id)));
+    if (!list.some((r) => !r.expiresAt || r.expiresAt >= today)) {
+      return jsonError("Mọi vai trò của tài khoản này đã hết thời hạn — vào Sửa phân quyền để gia hạn trước khi mở khoá.");
     }
   }
 
@@ -44,10 +60,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (roleAssignments) {
       await tx.delete(userRoles).where(eq(userRoles.userId, id));
       await tx.insert(userRoles).values(
-        roleAssignments.map((ra: { role: string; departmentId?: number }) => ({
+        roleAssignments.map((ra: { role: string; departmentId?: number; acting?: boolean; expiresAt: Date | null }) => ({
           userId: id,
           role: ra.role as (typeof ROLE_CODES)[number],
           departmentId: ra.departmentId ?? null,
+          acting: Boolean(ra.acting),
+          expiresAt: ra.expiresAt,
         }))
       );
     }

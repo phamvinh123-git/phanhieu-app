@@ -7,7 +7,7 @@ import { useMe } from "@/components/MeProvider";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { initials } from "@/components/layout/AppShell";
 import { ModalShell } from "@/components/ModalShell";
-import { ROLE_CODES, ROLE_LABELS, ROLE_SCOPE, type RoleCode } from "@/lib/rbac-config";
+import { ROLE_CODES, ROLE_LABELS, ROLE_SCOPE, roleLabel, type RoleCode } from "@/lib/rbac-config";
 
 type UserRow = {
   id: string;
@@ -15,11 +15,19 @@ type UserRow = {
   email: string;
   phone: string | null;
   isActive: boolean;
-  roles: { role: RoleCode; departmentId: number | null }[];
+  roles: { role: RoleCode; departmentId: number | null; acting?: boolean; expiresAt?: string | null }[];
 };
 
 type Department = { id: number; name: string };
-type RoleRow = { role: RoleCode; departmentId?: number };
+type RoleRow = { role: RoleCode; departmentId?: number; acting?: boolean; expiresAt?: string };
+
+/** Ngày hôm nay (giờ VN) yyyy-mm-dd */
+function todayYmd() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
+}
+const ymd = (d?: string | null) => (d ? d.slice(0, 10) : "");
+const vnDate = (d?: string | null) => (d ? ymd(d).split("-").reverse().join("/") : "");
+const roleExpired = (r: { expiresAt?: string | null }) => Boolean(r.expiresAt && ymd(r.expiresAt) < todayYmd());
 
 const inputCls = "field";
 
@@ -146,7 +154,7 @@ export default function AdminUsersPage() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[760px]">
+            <table className="data-table min-w-[900px]">
               <thead>
                 <tr>
                   <th>Người dùng</th>
@@ -172,19 +180,30 @@ export default function AdminUsersPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="max-w-[220px] text-muted">{units.length ? units.join(", ") : "Toàn Phân hiệu"}</td>
+                      <td className="min-w-[160px] max-w-[220px] text-muted">{units.length ? units.join(", ") : "Toàn Phân hiệu"}</td>
                       <td>
                         <div className="flex flex-wrap gap-1.5">
                           {u.roles.map((r, ri) => (
-                            <span key={ri} className="badge badge-brand">
-                              {ROLE_LABELS[r.role]}
+                            <span key={ri} className="inline-flex flex-col items-start">
+                              <span className={`badge ${roleExpired(r) ? "badge-neutral line-through" : "badge-brand"}`}>
+                                {roleLabel(r.role, r.acting)}
+                              </span>
+                              {r.expiresAt && (
+                                <span className={`mt-0.5 pl-1 text-[11px] ${roleExpired(r) ? "text-overdue" : "text-muted"}`}>
+                                  {roleExpired(r) ? "Hết hạn" : "Đến"} {vnDate(r.expiresAt)}
+                                </span>
+                              )}
                             </span>
                           ))}
                         </div>
                       </td>
                       <td>
                         <span className={`badge ${u.isActive ? "badge-done" : "badge-overdue"}`}>
-                          {u.isActive ? "Đang hoạt động" : "Tạm khoá"}
+                          {u.isActive
+                            ? "Đang hoạt động"
+                            : u.roles.length > 0 && u.roles.every(roleExpired)
+                              ? "Hết thời hạn quyền"
+                              : "Tạm khoá"}
                         </span>
                       </td>
                       <td className="text-right">
@@ -321,6 +340,38 @@ function RoleRowsEditor({
                   </select>
                 )}
                 {scopeKind === "none" && <span className="flex-1 text-xs text-slate-400">Phạm vi toàn Phân Hiệu</span>}
+
+                <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-2">
+                  <label className="flex items-center gap-2 text-[13px] text-ink">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(row.acting)}
+                      onChange={(e) => updateRole(idx, { acting: e.target.checked })}
+                      className="h-4 w-4"
+                    />
+                    Quyền (giữ quyền tạm thời)
+                  </label>
+                  <label className="flex items-center gap-2 text-[13px] text-muted">
+                    Hiệu lực đến
+                    <input
+                      type="date"
+                      min={todayYmd()}
+                      value={row.expiresAt ?? ""}
+                      onChange={(e) => updateRole(idx, { expiresAt: e.target.value || undefined })}
+                      className="field h-9 w-auto text-[13px]"
+                    />
+                  </label>
+                  {row.expiresAt && (
+                    <button
+                      type="button"
+                      onClick={() => updateRole(idx, { expiresAt: undefined })}
+                      className="text-xs text-muted hover:text-red-700"
+                    >
+                      Bỏ thời hạn
+                    </button>
+                  )}
+                  {roleExpired(row) && <span className="text-xs font-medium text-overdue">Đã hết hạn — chọn ngày mới để gia hạn</span>}
+                </div>
 
                 {roleRows.length > 1 && (
                   <button
@@ -460,7 +511,12 @@ function EditUserModal({
   onSaved: () => void;
 }) {
   const [roleRows, setRoleRows] = useState<RoleRow[]>(
-    user.roles.map((r) => ({ role: r.role, departmentId: r.departmentId ?? undefined }))
+    user.roles.map((r) => ({
+      role: r.role,
+      departmentId: r.departmentId ?? undefined,
+      acting: Boolean(r.acting),
+      expiresAt: r.expiresAt ? ymd(r.expiresAt) : undefined,
+    }))
   );
   const [isActive, setIsActive] = useState(user.isActive);
   const [error, setError] = useState<string | null>(null);

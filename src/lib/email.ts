@@ -1,7 +1,8 @@
 import nodemailer from "nodemailer";
 import { db } from "@/db";
 import { departments, users, userRoles } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { roleIsActive } from "./role-expiry";
+import { and, eq, inArray } from "drizzle-orm";
 
 /**
  * Gửi email qua SMTP thông thường — dùng được với SMTP nội bộ của trường,
@@ -71,7 +72,7 @@ async function getDepartmentLeadEmails(departmentIds: number[]): Promise<string[
     .select({ email: users.email })
     .from(userRoles)
     .innerJoin(users, eq(users.id, userRoles.userId))
-    .where(inArray(userRoles.departmentId, departmentIds));
+    .where(and(inArray(userRoles.departmentId, departmentIds), eq(users.isActive, true), roleIsActive()));
   return [...new Set(rows.map((r) => r.email))];
 }
 
