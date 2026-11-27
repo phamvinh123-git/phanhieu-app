@@ -15,7 +15,9 @@ import {
   CalendarDays,
   Search,
   Eye,
+  Paperclip,
 } from "lucide-react";
+import { MeetingFiles, uploadMeetingFiles, FILE_ACCEPT, formatSize } from "@/components/MeetingFiles";
 import { useMe } from "@/components/MeProvider";
 import { ModalShell } from "@/components/ModalShell";
 import { can, type RoleCode } from "@/lib/rbac-config";
@@ -27,6 +29,7 @@ type Meeting = {
   meetingDate: string;
   content: string | null;
   status: "draft" | "reviewed";
+  fileCount?: number;
 };
 
 type Department = { id: number; name: string; code: string };
@@ -153,6 +156,12 @@ export default function MeetingsPage() {
                         className="block max-w-full truncate text-left font-medium text-ink hover:text-red-700"
                       >
                         {m.title}
+                        {!!m.fileCount && (
+                          <span className="ml-2 inline-flex items-center gap-0.5 align-middle text-xs font-normal text-muted" title={`${m.fileCount} file biên bản gốc`}>
+                            <Paperclip className="h-3.5 w-3.5" />
+                            {m.fileCount}
+                          </span>
+                        )}
                       </button>
                     </td>
                     <td className="tabular-nums text-muted">{formatDate(m.meetingDate)}</td>
@@ -201,6 +210,7 @@ export default function MeetingsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+            <MeetingFiles meetingId={viewing.id} canEdit={Boolean(canCreate)} onChanged={load} />
             <h3 className="mb-2 text-[13px] font-semibold text-muted">Nội dung / kết luận</h3>
             {viewing.content ? (
               <p className="whitespace-pre-line rounded-lg bg-background p-4 text-sm leading-relaxed text-ink">{viewing.content}</p>
@@ -256,6 +266,7 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
   const [rows, setRows] = useState<ExtractedRow[]>([]);
   const [skipped, setSkipped] = useState<SkippedLine[]>([]);
   const [sending, setSending] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -351,12 +362,23 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
         })),
       }),
     });
-    setSending(false);
     if (!res.ok) {
+      setSending(false);
       const data = await res.json().catch(() => ({}));
       setError(data.error ?? "Không thể gửi");
       return;
     }
+    const data = await res.json().catch(() => ({}));
+    if (attachments.length && data?.meeting?.id) {
+      const err = await uploadMeetingFiles(data.meeting.id, attachments);
+      if (err) {
+        setSending(false);
+        window.alert(`Đã gửi nhiệm vụ nhưng chưa tải được file biên bản gốc: ${err}. Mở biên bản và tải lại file.`);
+        onDone();
+        return;
+      }
+    }
+    setSending(false);
     onDone();
   }
 
@@ -433,6 +455,28 @@ function DispatchWizard({ onClose, onDone }: { onClose: () => void; onDone: () =
                 placeholder="Dán nội dung biên bản họp vào đây"
                 className={`${inputCls} font-mono text-[13px]`}
               />
+            </div>
+            <div>
+              <label htmlFor="mt-attach" className="field-label">
+                File biên bản gốc (PDF, Word hoặc ảnh — tối đa 20 MB)
+              </label>
+              <input
+                id="mt-attach"
+                type="file"
+                accept={FILE_ACCEPT}
+                multiple
+                onChange={(e) => setAttachments(Array.from(e.target.files ?? []))}
+                className="block w-full text-sm text-muted file:mr-3 file:h-9 file:cursor-pointer file:rounded-lg file:border-0 file:bg-red-50 file:px-3 file:text-[13px] file:font-semibold file:text-red-700 hover:file:bg-red-100"
+              />
+              {attachments.length > 0 && (
+                <ul className="mt-1.5 space-y-0.5 text-xs text-muted">
+                  {attachments.map((f, i) => (
+                    <li key={i} className="flex items-center gap-1.5">
+                      <Paperclip className="h-3.5 w-3.5" /> {f.name} · {formatSize(f.size)}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <AnimatePresence>

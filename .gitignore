@@ -43,3 +43,6 @@ next-env.d.ts
 
 # generated credentials (chứa mật khẩu tạm thời — không commit)
 credentials.generated.csv
+
+# file biên bản gốc tải lên (lưu trên máy chủ, không đưa vào git)
+/uploads

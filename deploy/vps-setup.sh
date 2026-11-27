@@ -161,6 +161,13 @@ if command -v pg_dump >/dev/null 2>&1; then
     || echo "!! Không sao lưu được database (vẫn tiếp tục)."
   ls -1t /root/backups/phanhieu/*.dump 2>/dev/null | tail -n +15 | xargs -r rm -f
 fi
+# Sao lưu file biên bản gốc đã tải lên (giữ 7 bản gần nhất)
+if [ -d "$APP_DIR/uploads" ]; then
+  mkdir -p /root/backups/phanhieu
+  tar -czf "/root/backups/phanhieu/uploads-$(date +%Y%m%d-%H%M%S).tgz" -C "$APP_DIR" uploads \
+    && echo ">> Đã sao lưu file đính kèm" || echo "!! Không sao lưu được file đính kèm (vẫn tiếp tục)."
+  ls -1t /root/backups/phanhieu/uploads-*.tgz 2>/dev/null | tail -n +8 | xargs -r rm -f
+fi
 
 # ---------------------------------------------------- 4. Build + dữ liệu
 echo ">> Cài thư viện và build (lần đầu mất vài phút)..."
@@ -182,6 +189,27 @@ pm2 delete "$PM2_NAME" >/dev/null 2>&1 || true
 pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
+
+# ---- 5b. Cho phép tải file biên bản gốc tới 25 MB qua nginx (mặc định 1 MB) ----
+# Chỉ sửa đúng file cấu hình nginx có server_name là tên miền của app; sao lưu
+# trước, kiểm tra "nginx -t", lỗi thì khôi phục ngay.
+DOMAIN_HOST=$(printf '%s' "${APP_URL:-}" | sed -E 's#^https?://([^/:]+).*#\1#')
+if command -v nginx >/dev/null 2>&1 && [[ "$DOMAIN_HOST" =~ [a-zA-Z] ]]; then
+  HOST_RE=$(printf '%s' "$DOMAIN_HOST" | sed 's/\./\\./g')
+  CONF=$(grep -RlE "server_name[^;]*[[:space:]]${HOST_RE}([[:space:];]|$)" /etc/nginx/sites-enabled /etc/nginx/conf.d 2>/dev/null | head -1 || true)
+  if [ -n "$CONF" ] && ! grep -q "client_max_body_size" "$CONF"; then
+    REAL=$(readlink -f "$CONF")
+    cp "$REAL" /root/nginx-phanhieu-before-upload.bak
+    sed -i -E "/server_name[^;]*[[:space:]]${HOST_RE}([[:space:];]|\$)/a\    client_max_body_size 25m;" "$REAL"
+    if nginx -t >/dev/null 2>&1; then
+      systemctl reload nginx 2>/dev/null || service nginx reload 2>/dev/null || nginx -s reload
+      echo ">> nginx: cho phép tải file tới 25 MB cho ${DOMAIN_HOST}"
+    else
+      cp /root/nginx-phanhieu-before-upload.bak "$REAL"
+      echo "!! Không chỉnh được giới hạn tải file của nginx (đã khôi phục cấu hình cũ)"
+    fi
+  fi
+fi
 
 # ------------------------- 6. Nhắc hạn công việc 08:00 hằng ngày (giờ VN)
 cat > /etc/cron.d/phanhieu-due-date-reminders <<CRON

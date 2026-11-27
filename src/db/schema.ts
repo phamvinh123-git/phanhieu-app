@@ -166,6 +166,21 @@ export const taskStatusHistory = pgTable("task_status_history", {
   changedAt: timestamp("changed_at").defaultNow().notNull(),
 });
 
+// File biên bản gốc đính kèm (PDF, Word, ảnh scan) — lưu trên ổ đĩa máy chủ
+// (thư mục UPLOAD_DIR), bảng này chỉ giữ thông tin file.
+export const meetingFiles = pgTable("meeting_files", {
+  id: serial("id").primaryKey(),
+  meetingId: integer("meeting_id")
+    .references(() => meetings.id, { onDelete: "cascade" })
+    .notNull(),
+  originalName: text("original_name").notNull(),
+  storedName: varchar("stored_name", { length: 120 }).notNull().unique(),
+  mimeType: varchar("mime_type", { length: 120 }).notNull(),
+  size: integer("size").notNull(),
+  uploadedBy: uuid("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ---------------------------------------------------------------------------
 // Thông báo trong app (chuông ở thanh trên cùng)
 // ---------------------------------------------------------------------------
