@@ -29,7 +29,7 @@ export function ModalShell({
         exit={{ opacity: 0, scale: 0.96, y: 8 }}
         transition={{ type: "spring", stiffness: 340, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
-        className={`max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl`}
+        className={`thin-scrollbar max-h-[90vh] w-full ${maxWidth} overflow-y-auto rounded-xl bg-white p-6 shadow-2xl`}
       >
         {children}
       </motion.div>

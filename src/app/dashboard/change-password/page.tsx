@@ -49,22 +49,21 @@ export default function ChangePasswordPage() {
     }
   }
 
-  const inputCls =
-    "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition-colors focus:border-red-400 focus:ring-1 focus:ring-red-200";
+  const inputCls = "field";
 
   return (
     <div className="max-w-md">
       <motion.h1
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-2 text-xl font-semibold text-slate-900"
+        className="flex items-center gap-3 text-2xl font-bold text-ink"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-red-600">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-600">
           <KeyRound className="h-4.5 w-4.5" />
         </span>
         Đổi mật khẩu
       </motion.h1>
-      <p className="mt-1 pl-12 text-sm text-slate-500">
+      <p className="mt-1 pl-[52px] text-sm text-muted">
         Nếu đây là lần đăng nhập đầu tiên bằng mật khẩu khởi tạo chung, bạn nên đổi ngay sang
         mật khẩu riêng của mình.
       </p>
@@ -74,10 +73,10 @@ export default function ChangePasswordPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08 }}
         onSubmit={onSubmit}
-        className="todo-card mt-6 space-y-4 p-5"
+        className="todo-card mt-6 space-y-4 p-6"
       >
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Mật khẩu hiện tại</label>
+          <label className="field-label">Mật khẩu hiện tại</label>
           <input
             type="password"
             required
@@ -87,7 +86,7 @@ export default function ChangePasswordPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Mật khẩu mới</label>
+          <label className="field-label">Mật khẩu mới</label>
           <input
             type="password"
             required
@@ -99,7 +98,7 @@ export default function ChangePasswordPage() {
           <p className="mt-1 text-xs text-slate-400">Ít nhất 8 ký tự.</p>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Nhập lại mật khẩu mới</label>
+          <label className="field-label">Nhập lại mật khẩu mới</label>
           <input
             type="password"
             required
@@ -128,7 +127,7 @@ export default function ChangePasswordPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-1.5 text-sm text-green-600"
+              className="flex items-center gap-1.5 text-sm text-done"
             >
               <CheckCircle2 className="h-4 w-4 animate-check-pop" />
               Đổi mật khẩu thành công.
@@ -141,7 +140,7 @@ export default function ChangePasswordPage() {
           whileTap={{ scale: 0.98 }}
           type="submit"
           disabled={loading}
-          className="w-full rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-red-600/20 transition-colors hover:bg-red-700 disabled:opacity-60"
+          className="btn btn-primary w-full"
         >
           {loading ? "Đang lưu..." : "Đổi mật khẩu"}
         </motion.button>

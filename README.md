@@ -68,6 +68,16 @@ Một nhiệm vụ cấp Phân hiệu có thể gắn với **nhiều Phòng** c
 - Khi tạo nhiệm vụ cấp Phân hiệu thủ công (không qua trích xuất), có thể tick chọn nhiều
   Phòng cùng lúc ở form tạo mới.
 
+## Giao diện (HMU TaskFlow)
+
+Giao diện theo tài liệu đặc tả UI/UX *HMU TaskFlow*. Design tokens nằm ở đầu
+`src/app/globals.css`: đỏ trầm `#B51F2E` / `#941827`, nền `#F7F8FA`, màu trạng thái Cần làm
+`#D97706` · Đang thực hiện `#2878D0` · Hoàn thành `#16A36A` · Quá hạn `#DC3545`, font Be Vietnam
+Pro. Thang màu `red-*` của Tailwind đã được chỉnh về tông đỏ thương hiệu, nên mọi class `red-*`
+tự khớp màu nhận diện. Các class dùng chung: `.btn` (`btn-primary|secondary|soft|danger`),
+`.field`, `.field-label`, `.data-table`, `.badge` (`badge-todo|progress|done|overdue`),
+`.todo-card`.
+
 ## Bảng phân quyền (RBAC)
 
 Nguồn duy nhất của toàn bộ ma trận quyền nằm ở [`src/lib/rbac-config.ts`](src/lib/rbac-config.ts)
@@ -87,7 +97,7 @@ vừa kiêm phụ trách Phòng B. Admin có thể chỉnh sửa toàn bộ tổ
 
 ## UI/UX: gộp tính năng theo vai trò
 
-Thanh menu ngang trên header đỏ (`src/components/AppHeader.tsx`, giao diện đồng bộ với hệ thống Giấy báo nộp tiền) đọc `/api/me`, lấy **hợp (union)** danh sách
+Sidebar đỏ trầm (`src/components/layout/AppShell.tsx`, theo tài liệu đặc tả UI/UX HMU TaskFlow) đọc `/api/me`, lấy **hợp (union)** danh sách
 menu của tất cả vai trò/phạm vi người dùng đang giữ — nếu một người là Trưởng phòng của cả
 2 phòng, họ vẫn chỉ thấy một mục "Kanban cấp Phòng" nhưng dữ liệu bên trong gộp cả 2 phòng.
 
@@ -219,7 +229,8 @@ src/
   app/login                       Trang đăng nhập (thiết kế theo tông đỏ-trắng của trường)
   components/KanbanBoard.tsx      Kanban dùng chung cho cả 2 cấp (branch/department), hỗ trợ
                                    hiển thị/chọn nhiều Phòng cho nhiệm vụ liên phòng
-  components/AppHeader.tsx        Header đỏ + menu gộp theo vai trò, logo trường
+  components/layout/AppShell.tsx  Sidebar + header (breadcrumb, ngày, tài khoản), menu gộp theo vai trò
+  components/ui.tsx               Thành phần dùng chung: PageHeader, KpiCard, badge trạng thái, EmptyState
 ```
 
 ## Giới hạn hiện tại / gợi ý mở rộng tiếp theo
