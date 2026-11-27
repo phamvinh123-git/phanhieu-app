@@ -178,7 +178,11 @@ curl -fsSL https://raw.githubusercontent.com/phamvinh123-git/phanhieu-app/main/d
 sudo bash vps-setup.sh
 ```
 
-- Tuỳ chọn: `sudo APP_PORT=3005 BRANCH=main bash vps-setup.sh`.
+- Lần cài đầu tự chọn một cổng còn trống (3005–3099) và tạo database riêng; nếu database
+  `phanhieu` đã có sẵn, script dừng chứ không đổi mật khẩu.
+- Đổi cổng / địa chỉ công khai của bản đã cài: `sudo SET_APP_PORT=3005 SET_APP_URL=https://ten.mien bash vps-setup.sh`.
+- Thay một bản cũ chạy bằng PM2 (cùng database): `sudo REPLACE_PM2=<tên> bash vps-setup.sh`.
+- Mỗi lần deploy tự sao lưu database vào `/root/backups/phanhieu` (giữ 14 bản).
 - Mọi tài khoản dùng chung mật khẩu ban đầu in ra cuối script (`SEED_DEFAULT_PASSWORD` trong
   `/opt/phanhieu-app/.env`), mỗi người tự đổi sau lần đăng nhập đầu.
 - **Cập nhật code mới**: chạy lại `sudo bash /opt/phanhieu-app/deploy/vps-setup.sh` — dữ liệu
