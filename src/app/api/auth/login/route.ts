@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, userRoles } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createSessionToken, setSessionCookie, verifyPassword } from "@/lib/auth";
 import { jsonError } from "@/lib/api-helpers";
 
@@ -11,7 +11,8 @@ export async function POST(req: NextRequest) {
   const password = body?.password?.toString();
   if (!email || !password) return jsonError("Thiếu email hoặc mật khẩu");
 
-  const [user] = await db.select().from(users).where(eq(users.email, email));
+  // So khớp email không phân biệt hoa/thường (dữ liệu cũ có thể lưu "Admin@…").
+  const [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email}`);
   if (!user || !user.isActive) return jsonError("Sai email hoặc mật khẩu", 401);
 
   const ok = await verifyPassword(password, user.passwordHash);
