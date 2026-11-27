@@ -12,6 +12,7 @@ import {
   FileText,
   Layers,
   KanbanSquare,
+  Newspaper,
   LogOut,
   KeyRound,
   ChevronDown,
@@ -32,6 +33,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   FileText,
   Layers,
   KanbanSquare,
+  Newspaper,
 };
 
 const HOME = { href: "/dashboard", label: "Tổng quan", icon: "LayoutDashboard" };
@@ -181,7 +183,7 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
   });
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-white/95 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 flex print:hidden h-16 shrink-0 items-center gap-3 border-b border-line bg-white/95 px-4 backdrop-blur sm:px-6">
       <button
         type="button"
         onClick={onOpenMenu}
@@ -290,7 +292,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
       {/* Sidebar cố định 248px — desktop */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] bg-[#941827] lg:block">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] bg-[#941827] lg:block print:!hidden">
         <SidebarBody />
       </aside>
 
@@ -330,14 +332,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Logo Phân hiệu in chìm giữa vùng nội dung, nằm sau mọi thành phần */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo-phan-hieu.png" alt="" aria-hidden="true" className="watermark-logo lg:ml-[124px]" />
+      <img src="/logo-phan-hieu.png" alt="" aria-hidden="true" className="watermark-logo lg:ml-[124px] print:hidden" />
 
-      <div className="relative z-[1] flex min-h-screen flex-col lg:pl-[248px]">
+      <div className="relative z-[1] flex min-h-screen flex-col lg:pl-[248px] print:!pl-0">
         <Header onOpenMenu={() => setDrawerOpen(true)} />
         <main className="mx-auto w-full max-w-[1400px] flex-1 px-3 py-5 sm:px-4 lg:px-6 lg:py-6">
           <div className="animate-fade-in-up">{children}</div>
         </main>
-        <footer className="px-6 pb-5 text-center text-xs text-muted">
+        <footer className="px-6 pb-5 text-center text-xs text-muted print:hidden">
           © {new Date().getFullYear()} Phân hiệu Trường Đại học Y Hà Nội tại Thanh Hoá
         </footer>
       </div>

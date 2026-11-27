@@ -4,6 +4,7 @@ import { notifications, taskDepartments, tasks, userRoles, users } from "@/db/sc
 import type { SessionPayload } from "./auth";
 import { DEPARTMENT_KANBAN_ENABLED } from "./rbac-config";
 import { roleIsActive } from "./role-expiry";
+import { weeklySummary } from "./insights";
 
 /**
  * Thông báo trong app. Người nhận một thông báo về nhiệm vụ là: mọi tài khoản
@@ -24,7 +25,7 @@ async function taskDepartmentIds(task: TaskRow): Promise<number[]> {
   return rows.map((r) => r.departmentId);
 }
 
-async function recipientsForTask(task: TaskRow, excludeUserId?: string): Promise<string[]> {
+export async function recipientsForTask(task: TaskRow, excludeUserId?: string): Promise<string[]> {
   const deptIds = await taskDepartmentIds(task);
   const ids = new Set<string>();
   if (deptIds.length) {
@@ -183,6 +184,29 @@ export async function ensureDueReminders(session: SessionPayload) {
     );
 }
 
+/** Bản tin tuần trong chuông thông báo: mỗi tuần 1 tin (tạo từ thứ Hai). */
+export async function ensureWeeklyDigest(session: SessionPayload) {
+  const d = await weeklySummary(session);
+  const key = `digest:${d.week.thisMon}`;
+  const vn = (s: string) => s.split("-").reverse().slice(0, 2).join("/");
+  const parts = [
+    d.overdue.length ? `${d.overdue.length} quá hạn` : null,
+    `${d.dueThisWeek.length} việc đến hạn trong 7 ngày`,
+    `${d.doneLastWeek.length} hoàn thành tuần trước`,
+    d.newLastWeek.length ? `${d.newLastWeek.length} việc mới` : null,
+  ].filter(Boolean);
+  if (d.openTotal === 0 && d.doneLastWeek.length === 0 && d.newLastWeek.length === 0) return;
+  await db
+    .insert(notifications)
+    .values({
+      userId: session.userId,
+      type: "digest",
+      message: `Tuần ${vn(d.week.thisMon)}–${vn(d.week.thisSun)}: ${parts.join(" · ")}`,
+      dedupeKey: key,
+    })
+    .onConflictDoNothing();
+}
+
 export async function listNotifications(session: SessionPayload, limit = 40) {
   const rows = await db
     .select({
@@ -230,7 +254,9 @@ export async function listNotifications(session: SessionPayload, limit = 40) {
       createdAt: r.createdAt,
       link: r.taskId
         ? `${r.taskLevel === "department" ? "/dashboard/department-tasks" : "/dashboard/branch-tasks"}?task=${r.taskId}`
-        : null,
+        : r.type === "digest"
+          ? "/dashboard/weekly"
+          : null,
     })),
   };
 }

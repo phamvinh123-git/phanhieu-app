@@ -16,7 +16,9 @@ import {
   Search,
   Eye,
   Paperclip,
+  ClipboardCheck,
 } from "lucide-react";
+import Link from "next/link";
 import { MeetingFiles, uploadMeetingFiles, FILE_ACCEPT, formatSize } from "@/components/MeetingFiles";
 import { useMe } from "@/components/MeProvider";
 import { ModalShell } from "@/components/ModalShell";
@@ -33,6 +35,27 @@ type Meeting = {
 };
 
 type Department = { id: number; name: string; code: string };
+type MeetingProgress = { total: number; done: number; inProgress: number; todo: number; overdue: number };
+
+/** Thanh tiến độ thực hiện kết luận của một cuộc họp. */
+function ProgressCell({ p }: { p?: MeetingProgress }) {
+  if (!p || p.total === 0) return <span className="text-xs text-muted">—</span>;
+  const pct = Math.round((p.done / p.total) * 100);
+  return (
+    <div className="w-[150px]">
+      <div className="flex items-baseline gap-1.5 whitespace-nowrap text-xs tabular-nums">
+        <span className="font-medium text-ink">
+          {p.done}/{p.total} xong
+        </span>
+        {p.overdue > 0 && <span className="font-medium text-overdue">· {p.overdue} quá hạn</span>}
+      </div>
+      <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full bg-done" style={{ width: `${pct}%` }} />
+        <div className="h-full bg-progress" style={{ width: `${(p.inProgress / p.total) * 100}%` }} />
+      </div>
+    </div>
+  );
+}
 
 export default function MeetingsPage() {
   const { me } = useMe();
@@ -40,6 +63,7 @@ export default function MeetingsPage() {
   const [loading, setLoading] = useState(true);
   const [showWizard, setShowWizard] = useState(false);
   const [viewing, setViewing] = useState<Meeting | null>(null);
+  const [progress, setProgress] = useState<Record<number, MeetingProgress>>({});
   const [query, setQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -50,6 +74,10 @@ export default function MeetingsPage() {
   );
 
   function load() {
+    fetch("/api/meetings/progress")
+      .then((r) => (r.ok ? r.json() : { progress: {} }))
+      .then((d) => setProgress(d.progress ?? {}))
+      .catch(() => {});
     setLoading(true);
     fetch("/api/meetings")
       .then((r) => r.json())
@@ -136,12 +164,13 @@ export default function MeetingsPage() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="data-table min-w-[720px]">
+            <table className="data-table min-w-[860px]">
               <thead>
                 <tr>
                   <th>Mã biên bản</th>
                   <th>Tên cuộc họp</th>
                   <th>Ngày họp</th>
+                  <th>Thực hiện kết luận</th>
                   <th>Trạng thái</th>
                   <th className="text-right">Thao tác</th>
                 </tr>
@@ -150,7 +179,7 @@ export default function MeetingsPage() {
                 {visible.map((m) => (
                   <tr key={m.id}>
                     <td className="font-medium tabular-nums text-muted">BB-{String(m.id).padStart(3, "0")}</td>
-                    <td className="max-w-[360px]">
+                    <td className="max-w-[300px]">
                       <button
                         onClick={() => setViewing(m)}
                         className="block max-w-full truncate text-left font-medium text-ink hover:text-red-700"
@@ -166,19 +195,22 @@ export default function MeetingsPage() {
                     </td>
                     <td className="tabular-nums text-muted">{formatDate(m.meetingDate)}</td>
                     <td>
+                      <ProgressCell p={progress[m.id]} />
+                    </td>
+                    <td>
                       <span className={`badge ${m.status === "reviewed" ? "badge-done" : "badge-todo"}`}>
                         {m.status === "reviewed" ? "Đã rà soát" : "Nháp"}
                       </span>
                     </td>
                     <td className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-2 whitespace-nowrap">
                         <button onClick={() => setViewing(m)} className="btn btn-secondary btn-sm">
                           <Eye className="h-3.5 w-3.5" /> Xem
                         </button>
                         {canCreate && (
                           <button onClick={() => toggleReviewed(m)} className="btn btn-soft btn-sm">
                             <CheckCircle2 className="h-3.5 w-3.5" />
-                            {m.status === "reviewed" ? "Chuyển về nháp" : "Đã rà soát"}
+                            {m.status === "reviewed" ? "Về nháp" : "Đã rà soát"}
                           </button>
                         )}
                       </div>
@@ -210,6 +242,17 @@ export default function MeetingsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+            {progress[viewing.id]?.total ? (
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-background p-3">
+                <div className="min-w-[200px] flex-1">
+                  <p className="mb-1 text-[13px] font-semibold text-muted">Tình hình thực hiện kết luận</p>
+                  <ProgressCell p={progress[viewing.id]} />
+                </div>
+                <Link href={`/dashboard/meetings/${viewing.id}/report`} className="btn btn-primary btn-sm">
+                  <ClipboardCheck className="h-4 w-4" /> Báo cáo thực hiện
+                </Link>
+              </div>
+            ) : null}
             <MeetingFiles meetingId={viewing.id} canEdit={Boolean(canCreate)} onChanged={load} />
             <h3 className="mb-2 text-[13px] font-semibold text-muted">Nội dung / kết luận</h3>
             {viewing.content ? (

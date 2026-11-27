@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, MessageSquare, Clock, AlertTriangle, ClipboardList, CheckCheck } from "lucide-react";
+import { Bell, BellRing, MessageSquare, Clock, AlertTriangle, ClipboardList, CheckCheck, Newspaper } from "lucide-react";
 
 type Item = {
   id: number;
-  type: "comment" | "assigned" | "due_soon" | "overdue";
+  type: "comment" | "assigned" | "due_soon" | "overdue" | "reminder" | "digest";
   message: string;
   taskId: number | null;
   taskTitle: string | null;
@@ -20,6 +20,8 @@ const TYPE_META: Record<Item["type"], { icon: React.ComponentType<{ className?: 
   assigned: { icon: ClipboardList, cls: "bg-red-50 text-red-600", label: "Nhiệm vụ mới" },
   due_soon: { icon: Clock, cls: "bg-[#FFF4E5] text-todo", label: "Sắp đến hạn" },
   overdue: { icon: AlertTriangle, cls: "bg-[#FEF2F2] text-overdue", label: "Quá hạn" },
+  reminder: { icon: BellRing, cls: "bg-red-50 text-red-700", label: "Lãnh đạo nhắc" },
+  digest: { icon: Newspaper, cls: "bg-[#ECFDF3] text-done", label: "Bản tin tuần" },
 };
 
 function timeAgo(iso: string) {

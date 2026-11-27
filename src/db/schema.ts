@@ -190,6 +190,8 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "assigned", // nhiệm vụ mới được giao cho Phòng
   "due_soon", // còn ≤ 3 ngày đến hạn
   "overdue", // đã quá hạn
+  "reminder", // lãnh đạo / Thư ký bấm "Nhắc" một nhiệm vụ
+  "digest", // bản tin tuần (sáng thứ Hai)
 ]);
 
 export const notifications = pgTable(

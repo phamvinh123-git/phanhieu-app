@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Loader, CalendarClock, CheckCircle2, Plus, ArrowRight, AlertTriangle, Inbox } from "lucide-react";
+import { ClipboardList, Loader, CalendarClock, CheckCircle2, Plus, Inbox } from "lucide-react";
 import { useMe } from "@/components/MeProvider";
+import { AttentionPanel } from "@/components/AttentionPanel";
 import { can, DEPARTMENT_KANBAN_ENABLED, type RoleCode } from "@/lib/rbac-config";
 import {
   PageHeader,
@@ -89,10 +90,6 @@ export default function DashboardHome() {
       dueSoon: list.filter((t) => isDueSoon(t)).length,
       overdue: list.filter((t) => isOverdue(t)),
       recent: [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 7),
-      attention: list
-        .filter((t) => isOverdue(t) || isDueSoon(t))
-        .sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? ""))
-        .slice(0, 6),
     };
   }, [tasks]);
 
@@ -133,6 +130,8 @@ export default function DashboardHome() {
           hint={stats.total ? `${Math.round((stats.done / stats.total) * 100)}% tổng số việc` : undefined}
         />
       </div>
+
+      <AttentionPanel />
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-3">
         {/* Công việc gần đây */}
@@ -211,38 +210,6 @@ export default function DashboardHome() {
                 );
               })}
             </div>
-          </section>
-
-          {/* Cần chú ý */}
-          <section className="todo-card p-5">
-            <h2 className="mb-3 flex items-center gap-2 text-[17px] font-semibold text-ink">
-              <AlertTriangle className="h-[18px] w-[18px] text-todo" />
-              Cần chú ý
-            </h2>
-            {loading ? (
-              <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
-            ) : stats.attention.length === 0 ? (
-              <p className="py-3 text-sm text-muted">Không có việc quá hạn hoặc sắp đến hạn.</p>
-            ) : (
-              <ul className="divide-y divide-line">
-                {stats.attention.map((t) => (
-                  <li key={t.id}>
-                    <Link href={LEVEL_PAGE[t.level]} className="flex items-center gap-3 py-2.5 hover:text-red-700">
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{t.title}</span>
-                        <span className="text-xs text-muted">Hạn {formatDate(t.dueDate)}</span>
-                      </span>
-                      {isOverdue(t) ? (
-                        <span className="badge badge-overdue">Quá hạn</span>
-                      ) : (
-                        <span className="badge badge-todo">Sắp đến hạn</span>
-                      )}
-                      <ArrowRight className="h-4 w-4 shrink-0 text-slate-300" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
           </section>
         </div>
       </div>

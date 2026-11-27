@@ -131,3 +131,59 @@ export async function notifyDueSoon(
     );
   }
 }
+
+const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+
+/** Email khi lãnh đạo / Thư ký bấm "Nhắc" một nhiệm vụ. */
+export async function sendReminderEmail(
+  to: string[],
+  task: { id: number; title: string; dueDate: Date | null },
+  actorName: string,
+  note: string
+) {
+  const dueText = task.dueDate ? new Date(task.dueDate).toLocaleDateString("vi-VN") : "chưa đặt hạn";
+  await sendMail(
+    to,
+    `[Nhắc nhở] ${task.title}`,
+    `<p><b>${esc(actorName)}</b> nhắc nhiệm vụ:</p>
+     <p style="font-size:16px;font-weight:600">${esc(task.title)}</p>
+     <p>Hạn hoàn thành: <b>${dueText}</b></p>
+     <p style="padding:8px 12px;background:#fceBED;border-radius:8px">${esc(note)}</p>
+     <p><a href="${appUrl()}/dashboard/branch-tasks?task=${task.id}">Mở nhiệm vụ trong hệ thống</a></p>`
+  );
+}
+
+type DigestTask = { title: string; dueDate: string | null; departments: { code: string }[] };
+
+/** Bản tin tuần gửi qua email (sáng thứ Hai). */
+export async function sendWeeklyDigestEmail(
+  to: string,
+  name: string,
+  d: {
+    week: { thisMon: string; thisSun: string };
+    doneLastWeek: DigestTask[];
+    dueThisWeek: DigestTask[];
+    overdue: DigestTask[];
+    newLastWeek: DigestTask[];
+  }
+) {
+  const vn = (s: string | null) => (s ? s.split("-").reverse().join("/") : "");
+  const list = (title: string, items: DigestTask[], color: string) =>
+    items.length
+      ? `<h3 style="margin:16px 0 6px;color:${color}">${title} (${items.length})</h3><ul>${items
+          .slice(0, 15)
+          .map((t) => `<li>${esc(t.title)}${t.departments.length ? ` — <i>${t.departments.map((x) => x.code).join(", ")}</i>` : ""}${t.dueDate ? ` · hạn ${vn(t.dueDate)}` : ""}</li>`)
+          .join("")}${items.length > 15 ? `<li>… và ${items.length - 15} việc khác</li>` : ""}</ul>`
+      : "";
+  await sendMail(
+    [to],
+    `[Bản tin tuần ${vn(d.week.thisMon)}–${vn(d.week.thisSun)}] Tình hình thực hiện nhiệm vụ`,
+    `<p>Kính gửi ${esc(name)},</p>
+     <p>Tổng hợp nhiệm vụ trong phạm vi của bạn:</p>
+     ${list("Quá hạn", d.overdue, "#B91C1C")}
+     ${list("Đến hạn trong 7 ngày tới", d.dueThisWeek, "#B45309")}
+     ${list("Mới được giao tuần trước", d.newLastWeek, "#1D4ED8")}
+     ${list("Hoàn thành tuần trước", d.doneLastWeek, "#15803D")}
+     <p><a href="${appUrl()}/dashboard/weekly">Xem bản tin đầy đủ trong hệ thống</a></p>`
+  );
+}

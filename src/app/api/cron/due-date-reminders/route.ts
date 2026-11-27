@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { and, eq, gte, isNotNull, lte, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { tasks, taskDepartments } from "@/db/schema";
-import { notifyDueSoon } from "@/lib/email";
+import { notifyDueSoon, sendWeeklyDigestEmail } from "@/lib/email";
+import { weeklySummary } from "@/lib/insights";
+import { roleIsActive, todayVN } from "@/lib/role-expiry";
+import { users, userRoles } from "@/db/schema";
 import { lockExpiredAccounts } from "@/lib/role-expiry";
 
 /**
@@ -78,5 +81,28 @@ export async function POST(req: NextRequest) {
   await notifyDueSoon(items);
   const locked = await lockExpiredAccounts();
 
-  return NextResponse.json({ checked: dueSoonTasks.length, notified: items.length, lockedExpiredAccounts: locked });
+  // Bản tin tuần qua email: sáng thứ Hai (hoặc gọi kèm ?digest=1 để gửi ngay)
+  let digests = 0;
+  const isMonday = new Date(`${todayVN()}T00:00:00Z`).getUTCDay() === 1;
+  if (isMonday || req.nextUrl.searchParams.get("digest") === "1") {
+    const people = await db.select().from(users).where(eq(users.isActive, true));
+    for (const u of people) {
+      const roles = await db
+        .select({ role: userRoles.role, departmentId: userRoles.departmentId })
+        .from(userRoles)
+        .where(and(eq(userRoles.userId, u.id), roleIsActive()));
+      if (roles.length === 0) continue;
+      const d = await weeklySummary({ userId: u.id, fullName: u.fullName, email: u.email, roles });
+      if (!d.overdue.length && !d.dueThisWeek.length && !d.doneLastWeek.length && !d.newLastWeek.length) continue;
+      await sendWeeklyDigestEmail(u.email, u.fullName, d);
+      digests++;
+    }
+  }
+
+  return NextResponse.json({
+    checked: dueSoonTasks.length,
+    notified: items.length,
+    lockedExpiredAccounts: locked,
+    weeklyDigestEmails: digests,
+  });
 }
