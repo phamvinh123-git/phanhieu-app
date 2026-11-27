@@ -186,8 +186,6 @@ export function IdleScreen() {
             <p className="mt-2 text-lg font-semibold uppercase tracking-[0.12em] sm:text-xl">Phân hiệu tại Thanh Hoá</p>
             <p className="mt-2 text-xs font-light tracking-[0.08em] text-white/60 sm:text-sm">Hệ thống quản lý và phân công công việc</p>
           </motion.div>
-
-          <p className="idle-hint absolute bottom-[11vh] text-[11px] uppercase tracking-[0.3em] text-white/80">Di chuột hoặc nhấn phím bất kỳ để tiếp tục</p>
         </motion.div>
       )}
     </AnimatePresence>
