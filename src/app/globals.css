@@ -694,6 +694,13 @@ input[type="radio"] {
   }
 }
 
+/* Thẻ Kanban: nhấn giữ trên điện thoại để kéo — không bôi đen chữ / không hiện menu */
+.kanban-card {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Thanh cuộn mảnh */
 .thin-scrollbar::-webkit-scrollbar {
   width: 6px;

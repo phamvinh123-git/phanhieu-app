@@ -237,10 +237,10 @@ export default function AuditPage() {
               </button>
             );
           })}
-          <div className="ml-auto flex items-center gap-2 text-[13px] text-muted">
-            <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="field !h-9 !w-auto" />
+          <div className="flex w-full items-center gap-2 text-[13px] text-muted sm:ml-auto sm:w-auto">
+            <input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="field !h-9 min-w-0 flex-1 sm:!w-auto sm:flex-none" />
             <span>→</span>
-            <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="field !h-9 !w-auto" />
+            <input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="field !h-9 min-w-0 flex-1 sm:!w-auto sm:flex-none" />
           </div>
         </div>
         <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_180px_220px_220px_auto]">

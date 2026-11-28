@@ -118,7 +118,7 @@ export default function DashboardHome() {
       />
 
       {/* KPI */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <KpiCard label="Tổng công việc" value={loading ? "–" : stats.total} icon={ClipboardList} tone="brand" />
         <KpiCard label="Đang thực hiện" value={loading ? "–" : stats.inProgress} icon={Loader} tone="progress" hint={`${stats.todo} việc chưa bắt đầu`} />
         <KpiCard label="Sắp đến hạn" value={loading ? "–" : stats.dueSoon} icon={CalendarClock} tone="todo" hint={`Trong 7 ngày tới · ${stats.overdue.length} quá hạn`} />
@@ -148,7 +148,29 @@ export default function DashboardHome() {
           ) : stats.recent.length === 0 ? (
             <EmptyState icon={Inbox} title="Chưa có công việc nào" />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Điện thoại: danh sách gọn */}
+            <ul className="divide-y divide-line border-t border-line sm:hidden">
+              {stats.recent.map((t) => (
+                <li key={t.id}>
+                  <Link href={`${LEVEL_PAGE[t.level]}?task=${t.id}`} className="block px-5 py-3 active:bg-slate-50">
+                    <p className="line-clamp-2 text-[15px] font-medium leading-snug text-ink">{t.title}</p>
+                    <div className="mt-1.5 flex items-center justify-between gap-2 text-[13px]">
+                      <span className="min-w-0 truncate text-muted">
+                        {deptLabel(t) || "—"}
+                        {t.dueDate && (
+                          <span className={isOverdue(t) ? "font-medium text-overdue" : ""}> · {formatDate(t.dueDate)}</span>
+                        )}
+                      </span>
+                      <span className="shrink-0">
+                        <StatusBadge status={t.status} overdue={isOverdue(t)} />
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto sm:block">
               <table className="data-table min-w-[620px] table-fixed">
                 <thead>
                   <tr>
@@ -162,7 +184,7 @@ export default function DashboardHome() {
                   {stats.recent.map((t) => (
                     <tr key={t.id}>
                       <td>
-                        <Link href={LEVEL_PAGE[t.level]} className="block truncate font-medium text-ink hover:text-red-700">
+                        <Link href={`${LEVEL_PAGE[t.level]}?task=${t.id}`} className="block truncate font-medium text-ink hover:text-red-700">
                           {t.title}
                         </Link>
                       </td>
@@ -178,6 +200,7 @@ export default function DashboardHome() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </section>
 

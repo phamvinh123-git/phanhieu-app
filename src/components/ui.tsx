@@ -61,7 +61,7 @@ export function PageHeader({
   return (
     <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold leading-tight text-ink">{title}</h1>
+        <h1 className="text-[22px] font-bold leading-tight text-ink sm:text-2xl">{title}</h1>
         {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -90,15 +90,15 @@ export function KpiCard({
     overdue: "bg-[#FEF2F2] text-overdue",
   };
   return (
-    <div className="todo-card p-5">
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-[13px] font-medium text-muted">{label}</p>
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tones[tone]}`}>
-          <Icon className="h-[18px] w-[18px]" />
+    <div className="todo-card min-w-0 p-3.5 sm:p-5">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <p className="text-[12px] font-medium leading-snug text-muted sm:text-[13px]">{label}</p>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 ${tones[tone]}`}>
+          <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
         </span>
       </div>
-      <p className="kpi-number mt-2 text-[30px] font-bold leading-none text-ink">{value}</p>
-      {hint && <p className="mt-2 text-xs text-muted">{hint}</p>}
+      <p className="kpi-number mt-1.5 text-[26px] font-bold leading-none text-ink sm:mt-2 sm:text-[30px]">{value}</p>
+      {hint && <p className="mt-1.5 text-[11px] leading-snug text-muted sm:mt-2 sm:text-xs">{hint}</p>}
     </div>
   );
 }

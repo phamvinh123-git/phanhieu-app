@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, X, Clock, MessageSquare, Building2, Check, Inbox, Search, CalendarDays, FileText, Flag, Layers, Send, SlidersHorizontal } from "lucide-react";
@@ -81,6 +81,12 @@ export function KanbanBoard({
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [dragId, setDragId] = useState<number | null>(null);
   const [dragOverCol, setDragOverCol] = useState<Task["status"] | null>(null);
+  // Kéo-thả bằng ngón tay (điện thoại / máy tính bảng): nhấn giữ thẻ ~0,4s để nhấc lên
+  const [touchDrag, setTouchDrag] = useState<{ task: Task; x: number; y: number } | null>(null);
+  const [touchOver, setTouchOver] = useState<Task["status"] | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressStart = useRef<{ x: number; y: number } | null>(null);
+  const suppressClick = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -146,6 +152,69 @@ export function KanbanBoard({
     if (t.departments.length === 1) return t.departments[0].name;
     return `${t.departments.length} phòng phối hợp: ${t.departments.map((d) => d.code).join(", ")}`;
   }
+
+  function cancelPress() {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+    pressStart.current = null;
+  }
+
+  function onCardTouchStart(e: React.TouchEvent, t: Task) {
+    if (!canMove || e.touches.length !== 1) return;
+    const { clientX: x, clientY: y } = e.touches[0];
+    cancelPress();
+    pressStart.current = { x, y };
+    pressTimer.current = setTimeout(() => {
+      pressTimer.current = null;
+      suppressClick.current = true;
+      navigator.vibrate?.(15);
+      setTouchDrag({ task: t, x, y });
+      setTouchOver(null);
+    }, 380);
+  }
+
+  function onCardTouchMove(e: React.TouchEvent) {
+    // Ngón tay di chuyển trước khi đủ thời gian giữ → đang cuộn trang, không kéo
+    const st = pressStart.current;
+    if (!st || !pressTimer.current) return;
+    const { clientX, clientY } = e.touches[0];
+    if (Math.abs(clientX - st.x) > 10 || Math.abs(clientY - st.y) > 10) cancelPress();
+  }
+
+  // Khi đang kéo: chặn cuộn trang, cho thẻ đi theo ngón tay, thả vào cột / ô trạng thái
+  const dragTaskId = touchDrag?.task.id;
+  useEffect(() => {
+    if (dragTaskId == null) return;
+    const targetAt = (x: number, y: number) => {
+      const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-drop-status]");
+      return (el?.dataset.dropStatus as Task["status"] | undefined) ?? null;
+    };
+    let over: Task["status"] | null = null;
+    const move = (e: TouchEvent) => {
+      e.preventDefault();
+      const { clientX: x, clientY: y } = e.touches[0];
+      over = targetAt(x, y);
+      setTouchOver(over);
+      setTouchDrag((d) => (d ? { ...d, x, y } : d));
+    };
+    const end = () => {
+      const task = tasks.find((t) => t.id === dragTaskId);
+      if (over && task && over !== task.status) updateStatus(dragTaskId, over);
+      setTouchDrag(null);
+      setTouchOver(null);
+      // Bỏ qua cú "click" trình duyệt phát ra ngay sau khi nhấc tay
+      setTimeout(() => (suppressClick.current = false), 400);
+    };
+    document.addEventListener("touchmove", move, { passive: false });
+    document.addEventListener("touchend", end);
+    document.addEventListener("touchcancel", end);
+    return () => {
+      document.removeEventListener("touchmove", move);
+      document.removeEventListener("touchend", end);
+      document.removeEventListener("touchcancel", end);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragTaskId]);
 
   async function updateStatus(taskId: number, status: Task["status"]) {
     const prev = tasks;
@@ -371,8 +440,9 @@ export function KanbanBoard({
               setDragId(null);
               setDragOverCol(null);
             }}
+            data-drop-status={col.key}
             className={`flex w-[85vw] max-w-[380px] shrink-0 snap-start flex-col rounded-xl border bg-white sm:w-[340px] lg:w-auto lg:max-w-none ${
-              dragOverCol === col.key ? "border-red-300 ring-2 ring-red-100" : "border-line"
+              dragOverCol === col.key || touchOver === col.key ? "border-red-300 ring-2 ring-red-100" : "border-line"
             }`}
           >
             <div
@@ -405,7 +475,18 @@ export function KanbanBoard({
                           transition={{ type: "spring", stiffness: 380, damping: 30 }}
                           draggable={canMove}
                           onDragStart={() => setDragId(t.id)}
-                          onClick={() => setActiveTask(t)}
+                          onTouchStart={(e) => onCardTouchStart(e, t)}
+                          onTouchMove={onCardTouchMove}
+                          onTouchEnd={cancelPress}
+                          onTouchCancel={cancelPress}
+                          onContextMenu={(e) => {
+                            // Nhấn giữ trên điện thoại: không hiện menu của trình duyệt
+                            if (canMove && (pressTimer.current || touchDrag)) e.preventDefault();
+                          }}
+                          onClick={() => {
+                            if (suppressClick.current) return;
+                            setActiveTask(t);
+                          }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
@@ -415,7 +496,9 @@ export function KanbanBoard({
                           tabIndex={0}
                           role="button"
                           aria-label={`Mở chi tiết: ${t.title}`}
-                          className={`group cursor-pointer rounded-lg border bg-white p-3 transition-colors hover:border-red-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 ${
+                          className={`kanban-card group cursor-pointer rounded-lg border bg-white p-3 transition-colors hover:border-red-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-200 ${
+                            touchDrag?.task.id === t.id ? "opacity-40" : ""
+                          } ${
                             overdue ? "border-l-[3px] border-[#F5C2C7] border-l-overdue" : "border-line"
                           }`}
                         >
@@ -484,6 +567,48 @@ export function KanbanBoard({
           </section>
         ))}
       </div>
+
+      {/* Kéo bằng ngón tay: thẻ "nổi" theo tay + 3 ô trạng thái lớn ở cuối màn hình */}
+      <AnimatePresence>
+        {touchDrag && (
+          <>
+            <div
+              className="pointer-events-none fixed z-[90] w-[70vw] max-w-[300px] -translate-x-1/2 -translate-y-[120%] rotate-[-2deg] rounded-lg border border-red-200 bg-white p-3 shadow-2xl"
+              style={{ left: touchDrag.x, top: touchDrag.y }}
+            >
+              <p className="line-clamp-2 text-[14px] font-semibold text-ink">{touchDrag.task.title}</p>
+            </div>
+            <motion.div
+              initial={{ y: 120 }}
+              animate={{ y: 0 }}
+              exit={{ y: 120 }}
+              transition={{ type: "spring", stiffness: 420, damping: 34 }}
+              className="fixed inset-x-0 bottom-0 z-[80] grid grid-cols-3 gap-2 border-t border-line bg-white/95 p-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] backdrop-blur"
+            >
+              {STATUS_COLUMNS.map((col) => {
+                const current = touchDrag.task.status === col.key;
+                const over = touchOver === col.key;
+                return (
+                  <div
+                    key={col.key}
+                    data-drop-status={col.key}
+                    className={`flex h-20 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed text-center text-[13px] font-semibold transition-all ${
+                      over ? "scale-105 text-white" : current ? "opacity-40" : "text-ink"
+                    }`}
+                    style={{
+                      borderColor: col.color,
+                      background: over ? col.color : col.tint,
+                    }}
+                  >
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: over ? "#fff" : col.color }} />
+                    {col.label}
+                  </div>
+                );
+              })}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showCreate && (

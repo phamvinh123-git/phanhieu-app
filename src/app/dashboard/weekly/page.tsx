@@ -58,7 +58,7 @@ export default function WeeklyPage() {
   return (
     <div>
       <PageHeader title="Bản tin tuần" description={`Tuần ${vn(d.week.thisMon)} – ${vn(d.week.thisSun)}`} />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <KpiCard label="Quá hạn" value={d.overdue.length} icon={AlertTriangle} tone="overdue" />
         <KpiCard label="Đến hạn 7 ngày tới" value={d.dueThisWeek.length} icon={CalendarClock} tone="todo" />
         <KpiCard label="Hoàn thành tuần trước" value={d.doneLastWeek.length} icon={CheckCircle2} tone="done" hint={`${vn(d.week.lastMon)} – ${vn(d.week.lastSun)}`} />
