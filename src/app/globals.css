@@ -701,6 +701,17 @@ input[type="radio"] {
   user-select: none;
 }
 
+/* iPhone/iPad: Safari tự phóng to (và giữ nguyên độ phóng) khi chạm vào ô nhập có chữ < 16px
+   → làm cả trang to và lệch. Trên thiết bị cảm ứng / màn hình nhỏ, ô nhập luôn dùng 16px. */
+@media (pointer: coarse), (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea,
+  .field {
+    font-size: 16px !important;
+  }
+}
+
 /* Thanh cuộn mảnh */
 .thin-scrollbar::-webkit-scrollbar {
   width: 6px;
