@@ -90,6 +90,19 @@ export function KanbanBoard({
   // Bỏ tích "Hoàn thành" → hỏi xác nhận rồi đưa về trạng thái trước đó
   const [reopenTask, setReopenTask] = useState<Task | null>(null);
   const [reopening, setReopening] = useState(false);
+  // Thông báo nhỏ sau khi đổi trạng thái: việc đã sang cột nào, có bị bộ lọc ẩn không
+  const [notice, setNotice] = useState<{ text: string; hidden: boolean } | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const [visibleCol, setVisibleCol] = useState<Task["status"]>("todo");
+
+  /** Điện thoại: các cột xếp ngang — trượt tới đúng cột */
+  function scrollToColumn(status: Task["status"]) {
+    const board = boardRef.current;
+    if (!board || board.scrollWidth <= board.clientWidth + 4) return;
+    const col = board.querySelector<HTMLElement>(`section[data-drop-status="${status}"]`);
+    if (col) board.scrollTo({ left: col.offsetLeft - 12, behavior: "smooth" });
+  }
   const [error, setError] = useState<string | null>(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -219,6 +232,15 @@ export function KanbanBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragTaskId]);
 
+  function announceMove(task: Task, status: Task["status"], verb: string) {
+    const hidden = !matchesFilters({ ...task, status });
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    const name = task.title.length > 60 ? `${task.title.slice(0, 60)}…` : task.title;
+    setNotice({ text: `${verb} “${name}” → ${STATUS_META[status].label}`, hidden });
+    if (!hidden) setTimeout(() => scrollToColumn(status), 150);
+    noticeTimer.current = setTimeout(() => setNotice(null), hidden ? 9000 : 4500);
+  }
+
   async function confirmReopen() {
     if (!reopenTask) return;
     setReopening(true);
@@ -232,6 +254,7 @@ export function KanbanBoard({
     setReopenTask(null);
     if (res.ok && data.task) {
       setTasks((ts) => ts.map((t) => (t.id === data.task.id ? { ...t, status: data.task.status } : t)));
+      announceMove(reopenTask, data.task.status, "Đã mở lại");
     } else {
       setError(data.error ?? "Không thể mở lại công việc");
       setTimeout(() => setError(null), 3500);
@@ -246,6 +269,8 @@ export function KanbanBoard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    const moved = prev.find((t) => t.id === taskId);
+    if (res.ok && moved && moved.status !== status) announceMove(moved, status, "Đã chuyển");
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       setTasks(prev);
@@ -259,9 +284,9 @@ export function KanbanBoard({
 
   // Hai bộ lọc độc lập, kết hợp với nhau (AND): lọc theo cuộc họp gốc và
   // lọc theo khoảng hạn hoàn thành — mỗi bộ lọc có thể bật/tắt riêng.
-  const filteredTasks = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return tasks.filter((t) => {
+  const matchesFilters = useCallback(
+    (t: Task) => {
+      const q = query.trim().toLowerCase();
       if (q && !t.title.toLowerCase().includes(q)) return false;
       if (quick && !matchesQuick(t, quick)) return false;
       if (priorityFilter && t.priority !== priorityFilter) return false;
@@ -277,8 +302,10 @@ export function KanbanBoard({
         if (toDate && d > toDate) return false;
       }
       return true;
-    });
-  }, [tasks, query, quick, priorityFilter, deptFilter, level, fromDate, toDate, includeNoDue, dateFilterActive, meetingFilterActive, selectedMeetingId]);
+    },
+    [query, quick, priorityFilter, deptFilter, level, fromDate, toDate, includeNoDue, dateFilterActive, meetingFilterActive, selectedMeetingId]
+  );
+  const filteredTasks = useMemo(() => tasks.filter(matchesFilters), [tasks, matchesFilters]);
 
   const anyFilter = Boolean(query || quick || priorityFilter || deptFilter || dateFilterActive || meetingFilterActive);
 
@@ -447,7 +474,46 @@ export function KanbanBoard({
       </AnimatePresence>
 
       {/* Bảng Kanban: 3 cột trên desktop, cuộn ngang trên điện thoại */}
-      <div className="thin-scrollbar -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-3 lg:overflow-visible">
+      {/* Điện thoại / máy tính bảng: thanh chuyển nhanh giữa các cột */}
+      <div className="mb-3 grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 lg:hidden" role="tablist" aria-label="Chuyển cột">
+        {STATUS_COLUMNS.map((col) => {
+          const active = visibleCol === col.key;
+          return (
+            <button
+              key={col.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => scrollToColumn(col.key)}
+              className={`flex items-center justify-center gap-1.5 rounded-lg px-1 py-2 text-[12px] font-semibold transition ${
+                active ? "bg-white text-ink shadow-sm" : "text-muted"
+              }`}
+            >
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: col.color }} />
+              <span className="truncate">{col.key === "in_progress" ? "Đang làm" : col.label}</span>
+              <span className="tabular-nums text-muted">{loading ? "…" : columns[col.key].length}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        ref={boardRef}
+        onScroll={(e) => {
+          // Cột nào đang chiếm phần lớn màn hình thì sáng lên ở thanh chuyển nhanh
+          const board = e.currentTarget;
+          let best: Task["status"] = "todo";
+          let bestDist = Infinity;
+          board.querySelectorAll<HTMLElement>("section[data-drop-status]").forEach((el) => {
+            const d = Math.abs(el.offsetLeft - 12 - board.scrollLeft);
+            if (d < bestDist) {
+              bestDist = d;
+              best = el.dataset.dropStatus as Task["status"];
+            }
+          });
+          if (best !== visibleCol) setVisibleCol(best);
+        }}
+        className="thin-scrollbar relative -mx-3 flex snap-x snap-mandatory gap-4 overflow-x-auto px-3 pb-2 sm:mx-0 sm:px-0 lg:grid lg:grid-cols-3 lg:overflow-visible"
+      >
         {STATUS_COLUMNS.map((col) => (
           <section
             key={col.key}
@@ -590,6 +656,39 @@ export function KanbanBoard({
           </section>
         ))}
       </div>
+
+      {/* Thông báo sau khi đổi trạng thái */}
+      <AnimatePresence>
+        {notice && !touchDrag && (
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 24 }}
+            role="status"
+            className="fixed inset-x-3 bottom-4 z-[85] mx-auto flex max-w-lg items-center gap-3 rounded-xl bg-slate-900 px-4 py-3 text-[13px] text-white shadow-2xl sm:bottom-6"
+          >
+            <Check className="h-4 w-4 shrink-0 text-emerald-400" />
+            <p className="min-w-0 flex-1">
+              {notice.text}
+              {notice.hidden && <span className="block text-amber-300">Việc này đang bị ẩn do bộ lọc đang bật.</span>}
+            </p>
+            {notice.hidden && (
+              <button
+                onClick={() => {
+                  clearFilters();
+                  setNotice(null);
+                }}
+                className="shrink-0 rounded-md bg-white/15 px-2.5 py-1.5 font-semibold hover:bg-white/25"
+              >
+                Bỏ lọc
+              </button>
+            )}
+            <button onClick={() => setNotice(null)} aria-label="Đóng" className="shrink-0 text-white/60 hover:text-white">
+              <X className="h-4 w-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Kéo bằng ngón tay: thẻ "nổi" theo tay + 3 ô trạng thái lớn ở cuối màn hình */}
       <AnimatePresence>
