@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { tasks, taskStatusHistory, taskDepartments, departments } from "@/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { requireSession, isSession, jsonError } from "@/lib/api-helpers";
 import { hasAction, resolveScope, type ScopeFilter } from "@/lib/permissions";
 import type { ModuleCode } from "@/lib/rbac-config";
@@ -69,6 +69,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!body) return jsonError("Dữ liệu không hợp lệ");
 
   const updates: Partial<typeof tasks.$inferInsert> = {};
+
+  // ---- Mở lại việc đã hoàn thành: quay về đúng trạng thái trước khi hoàn thành --
+  if (body.status === "reopen") {
+    if (task.status !== "done") return jsonError("Công việc chưa ở trạng thái Hoàn thành");
+    const [last] = await db
+      .select({ fromStatus: taskStatusHistory.fromStatus })
+      .from(taskStatusHistory)
+      .where(and(eq(taskStatusHistory.taskId, task.id), eq(taskStatusHistory.toStatus, "done")))
+      .orderBy(desc(taskStatusHistory.changedAt), desc(taskStatusHistory.id))
+      .limit(1);
+    body.status = last?.fromStatus && last.fromStatus !== "done" ? last.fromStatus : "todo";
+  }
 
   // ---- Cập nhật trạng thái (kéo-thả Kanban) --------------------------------
   if (body.status && body.status !== task.status) {

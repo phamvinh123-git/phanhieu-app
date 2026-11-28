@@ -87,6 +87,9 @@ export function KanbanBoard({
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pressStart = useRef<{ x: number; y: number } | null>(null);
   const suppressClick = useRef(false);
+  // Bỏ tích "Hoàn thành" → hỏi xác nhận rồi đưa về trạng thái trước đó
+  const [reopenTask, setReopenTask] = useState<Task | null>(null);
+  const [reopening, setReopening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -215,6 +218,25 @@ export function KanbanBoard({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragTaskId]);
+
+  async function confirmReopen() {
+    if (!reopenTask) return;
+    setReopening(true);
+    const res = await fetch(`/api/tasks/${reopenTask.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "reopen" }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setReopening(false);
+    setReopenTask(null);
+    if (res.ok && data.task) {
+      setTasks((ts) => ts.map((t) => (t.id === data.task.id ? { ...t, status: data.task.status } : t)));
+    } else {
+      setError(data.error ?? "Không thể mở lại công việc");
+      setTimeout(() => setError(null), 3500);
+    }
+  }
 
   async function updateStatus(taskId: number, status: Task["status"]) {
     const prev = tasks;
@@ -507,7 +529,8 @@ export function KanbanBoard({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateStatus(t.id, t.status === "done" ? "todo" : "done");
+                                if (t.status === "done") setReopenTask(t);
+                                else updateStatus(t.id, "done");
                               }}
                               className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                                 t.status === "done"
@@ -607,6 +630,26 @@ export function KanbanBoard({
               })}
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {reopenTask && (
+          <ModalShell onClose={() => !reopening && setReopenTask(null)}>
+            <h3 className="text-lg font-semibold text-ink">Mở lại công việc này?</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              <span className="font-medium text-ink">“{reopenTask.title}”</span> sẽ bỏ trạng thái Hoàn thành và quay về
+              trạng thái trước khi hoàn thành (Cần làm hoặc Đang thực hiện).
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button type="button" onClick={() => setReopenTask(null)} disabled={reopening} className="btn btn-secondary">
+                Huỷ
+              </button>
+              <button type="button" onClick={confirmReopen} disabled={reopening} className="btn btn-primary">
+                {reopening ? "Đang mở lại…" : "Mở lại"}
+              </button>
+            </div>
+          </ModalShell>
         )}
       </AnimatePresence>
 
